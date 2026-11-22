@@ -1,0 +1,21 @@
+# 後端會自動生成／含私隱，唔入倉庫
+__pycache__/
+*.pyc
+*.tmp
+_cdp_*.json
+
+# 含 API keys（公開倉庫唔應該入；缺如時後端自動用內置默認值）
+settings.json
+
+# 逐對像真實私信對話紀錄（私隱）＋每日配額／會話狀態（運行時自動重建）
+dm/
+engage-state.json
+gen-queue.json
+
+# 流水日誌／除錯產物
+auto-log.txt
+engage-log.txt
+_ps.log
+_shot_*.png
+posts/
+backup/

@@ -1,0 +1,25 @@
+{
+ "windows_weekday": "12:20-13:10,20:30-21:10",
+ "windows_weekend": "11:00-13:00,15:30-17:00,20:00-21:00",
+ "sleep_min": 25,
+ "sleep_max": 80,
+ "round_gap_min": 240,
+ "round_gap_max": 520,
+ "session_max_min": 25,
+ "daily": {
+  "like": 10,
+  "favorite": 4,
+  "comment": 4,
+  "reply": 8
+ },
+ "round": {
+  "like": 4,
+  "comment": 2,
+  "reply": 3
+ },
+ "comment_ratio": 40,
+ "favorite_ratio": 15,
+ "search_ratio": 40,
+ "keywords": "港女 中学生,   中学生日常,   粤语,   二次元 高中生,   香港 学生",
+ "blacklist": "政治,选举,维权,拆迁,募捐,抽奖"
+}

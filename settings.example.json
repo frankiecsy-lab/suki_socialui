@@ -1,0 +1,71 @@
+{
+  "llms": [
+    {
+      "id": "claude",
+      "name": "openrouter",
+      "type": "openai",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key": "",
+      "model": "baidu/ernie-5.5-flash-preview:free"
+    },
+    {
+      "id": "lmstudio",
+      "name": "http://192.168.0.2:47832/v1",
+      "type": "openai",
+      "base_url": "http://192.168.0.2:47832/v1",
+      "api_key": "",
+      "model": "nvfp4-nvfp4"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama (本機)",
+      "type": "openai",
+      "base_url": "http://127.0.0.1:11434/v1",
+      "api_key": "",
+      "model": "llama3"
+    }
+  ],
+  "comfyui": [
+    {
+      "id": "local",
+      "name": "本機 ComfyUI",
+      "url": "http://127.0.0.1:8188"
+    }
+  ],
+  "active_llm": "lmstudio",
+  "active_comfy": "local",
+  "workflows": [
+    {
+      "id": "img-z",
+      "name": "Z-Image Turbo 人像（內置正典）",
+      "type": "image",
+      "path": "tools/wf_template.json"
+    },
+    {
+      "id": "img-qwen-edit",
+      "name": "Qwen-Image 2.1 Edit 參考圖（食參考圖；面相跟參考人物，2026-11-21 實測通過）",
+      "type": "image",
+      "path": "tools/wf_image_qwen_edit.json"
+    },
+    {
+      "id": "img-h3-ref",
+      "name": "H3 Image 參考編輯（食參考圖；面相只係近似，唔鎖面）",
+      "type": "image",
+      "path": "tools/wf_image_minimax_h3_ref.json"
+    },
+    {
+      "id": "vid-h3",
+      "name": "MiniMax H3 ref2va（Suki 視頻正典，自動帶 REF）",
+      "type": "video",
+      "path": "tools/wf_video_minimax_ref2va.json"
+    },
+    {
+      "id": "vid-h3-selfie",
+      "name": "自拍專用 · H3 Ref2VA + InstaPic UltraReal LoRA",
+      "type": "video",
+      "path": "tools/wf_video_minimax_ref2va_selfie.json"
+    }
+  ],
+  "active_image_wf": "img-z",
+  "active_video_wf": "vid-h3-selfie"
+}

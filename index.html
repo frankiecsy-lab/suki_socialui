@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Suki Post Studio · 帖檔＋總覽＋媒體＋發布</title>
+<style>
+/* ── 主題（淺色為預設；深色經 body.dark 覆蓋）── */
+:root{--red:#ff2442;--violet:#8e44ad;--ink:#222;--mut:#999;--bg:#f5f5f7;--card:#fff;--line:#e8e8e8;--line2:#eee;
+--input:#fff;--iline:#ddd;--soft:#f6f6f8;--hint:#555;--link:#2b6cb3;--term:#111;--termfg:#7cfc8a}
+body.dark{--ink:#e8e8ec;--bg:#15161a;--card:#1e2026;--line:#2c2f37;--line2:#33363f;--input:#23262d;--iline:#3a3e48;
+--soft:#262932;--hint:#aeb3bd;--mut:#7d828c;--red:#ff4d64;--link:#6ea8e6}
+*{box-sizing:border-box;font-family:"PingFang HK","Microsoft JhengHei","Segoe UI",sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink)}
+header{padding:10px 20px;background:var(--card);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header b{font-size:16px}
+.hspace{margin-left:auto;font-size:12px;color:var(--hint);display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}/* 2026-11-22：可換行——之前長選項撐爆頁頭令每一頁都有橫向 scrollBar */
+.dot{width:9px;height:9px;border-radius:50%;background:#bbb;display:inline-block;margin-right:4px;vertical-align:middle}
+.dot.on{background:#2ecc71}.dot.off{background:#e74c3c}
+main{display:flex;gap:12px;padding:12px;max-width:none;align-items:flex-start}
+/* ── 帖檔列表 ── */
+.rail{width:245px;min-width:245px;display:flex;flex-direction:column;gap:8px}
+.rail .card{padding:10px}
+.plist{max-height:70vh;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.pitem{border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:12px;cursor:pointer;background:var(--card)}
+.pitem:hover{border-color:#8a8f99}
+.pitem.sel{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.pitem .t{font-weight:700;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;font-size:10px;padding:1px 8px;border-radius:999px;color:#fff;margin-right:6px;vertical-align:1px}
+.b-draft{background:#95a5a6}.b-ready{background:#3498db}.b-published{background:#27ae60}.b-scheduled{background:#e67e22}
+.pmeta{color:var(--mut);margin-top:3px}
+.fbn{color:var(--red);font-weight:700}
+/* ── 手機模擬（保持實際 App 的淺色外觀，不隨主題反轉；大/中/小可調）── */
+.phonecol{display:flex;flex-direction:column;gap:8px;align-items:center}
+.phone{--pw:345px;width:var(--pw);min-width:var(--pw);background:#fff;border:10px solid #111;border-radius:36px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.28)}
+.pstatus{height:24px;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-size:10px;color:#222}
+.cover{width:100%;aspect-ratio:3/4;background:#eee center/cover no-repeat;cursor:zoom-in}
+.pbody{padding:12px 14px 16px;max-height:calc(var(--pw) * 1.5);overflow:auto;background:#fff;color:#222}
+.ptitle{font-size:16px;font-weight:700;margin:2px 0 8px;line-height:1.4;color:#222}
+.ptext{font-size:14px;line-height:1.75;white-space:pre-wrap;word-break:break-word;color:#222}
+.ptext .tag{color:#2b6cb3}
+.prow{display:flex;gap:16px;color:#999;font-size:12px;margin-top:12px;border-top:1px solid #f0f0f0;padding-top:10px}
+/* ── 面板（用戶拍板 2026-11-21：編輯欄寬度縮至約 70%；生成卡移至最右欄）── */
+.panel{flex:1;display:flex;flex-direction:column;gap:14px;min-width:300px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.card h3{margin:0 0 10px;font-size:14px}
+.meta{font-size:12px;color:var(--hint);line-height:1.7}
+input.txt,textarea{width:100%;border:1px solid var(--iline);border-radius:10px;padding:9px;font-size:13.5px;background:var(--input);color:var(--ink)}
+textarea{min-height:110px;resize:vertical;line-height:1.7}
+input.txt:focus,textarea:focus{outline:none;border-color:#f7a}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* 表頭工作流下拉：選項名好長會撐爆成個頁（橫向 scrollBar 出喺每一頁）——限寬（2026-11-22 偵測所見）*/
+#wf_g_img,#wf_g_vid{max-width:230px}
+/* 自動互動頁兩欄喺窄螢幕跌落單欄（用戶 2026-11-22 佈局；內聯 grid-template 要 !important 先蓋到）*/
+@media (max-width:980px){#view_engage{grid-template-columns:1fr !important}}
+button{border:0;border-radius:999px;padding:8px 16px;font-size:13px;cursor:pointer;background:var(--line2);color:var(--ink)}
+button.primary{background:var(--red);color:#fff;font-weight:700}
+button.vio{background:var(--violet);color:#fff;font-weight:700}
+button.ghost{background:transparent;border:1px solid var(--iline);color:var(--ink)}
+button.tiny{padding:4px 10px;font-size:11.5px}
+button.danger{background:transparent;border:1px solid var(--iline);color:#e05c5c;padding:2px 8px;font-size:11px}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.on{background:var(--red);color:#fff}
+input[type=datetime-local]{border:1px solid var(--iline);border-radius:8px;padding:7px;font-size:12.5px;background:var(--input);color:var(--ink)}
+#status{white-space:pre-wrap;font-size:12px;background:var(--term);color:var(--termfg);border-radius:10px;padding:9px 11px;min-height:38px;font-family:Consolas,monospace}
+.bar{height:5px;background:var(--line2);border-radius:3px;overflow:hidden;margin:3px 0 8px}
+.bar i{display:block;height:100%;background:#2ecc71}.bar i.warn{background:#f39c12}.bar i.over{background:var(--red)}
+.fb{font-size:12px;border-left:3px solid var(--iline);padding:3px 8px;margin:5px 0;color:var(--hint)}
+.fb.unhandled{border-color:var(--red);color:#d0708a}
+table{width:100%;border-collapse:collapse;font-size:12px}
+td{padding:4px 4px;border-bottom:1px solid var(--line2);vertical-align:middle}
+td input{width:100%;border:1px solid var(--iline);border-radius:6px;padding:5px;font-size:12px;background:var(--input);color:var(--ink)}
+td input.k{font-family:Consolas}
+.hist{font-size:11.5px;color:var(--mut);white-space:pre-wrap;max-height:160px;overflow:auto}
+.sel{border:1px solid var(--iline);border-radius:8px;padding:5px 8px;font-size:12px;background:var(--input);color:var(--ink)}
+textarea#e_content{min-height:250px}
+/* ── 帖內媒體管理器（拖拉排序＋刪除；用戶拍板：多媒體可排序可刪）── */
+.mmg{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.mmi{position:relative;width:92px;border:1px solid var(--iline);border-radius:8px;overflow:hidden;background:var(--soft);cursor:grab}
+.mmi.dragover{outline:2px solid var(--red)}
+.mmi img,.mmi video{width:92px;height:112px;object-fit:cover;display:block;pointer-events:none}
+.mmi .vtag{width:92px;height:112px;display:flex;align-items:center;justify-content:center;font-size:30px}
+.mmi .cbadge{position:absolute;left:0;top:0;background:var(--red);color:#fff;font-size:9px;padding:1px 6px;border-radius:0 0 6px 0}
+.mmi .del{position:absolute;right:2px;top:2px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1;padding:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--violet);color:var(--violet);border-radius:999px;padding:2px 8px;font-size:11.5px;background:var(--card)}
+.chip img{width:20px;height:26px;object-fit:cover;border-radius:3px}
+.chip .x{border:0;background:none;color:var(--violet);cursor:pointer;font-size:13px;padding:0 2px}
+/* ── 自動設計：生成內容選擇（可覆選＋拖拉排序）── */
+.kchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--iline);border-radius:999px;padding:6px 12px;font-size:12.5px;cursor:pointer;user-select:none;background:var(--card)}
+.kchip .ord{display:none;width:16px;height:16px;border-radius:50%;background:var(--violet);color:#fff;font-size:10px;align-items:center;justify-content:center;font-weight:700}
+.kchip.on{border-color:var(--violet);color:var(--violet);font-weight:700;background:color-mix(in srgb,var(--violet) 8%,transparent)}
+.kchip.on .ord{display:inline-flex}
+.kchip.dragover{border-color:var(--red)}
+/* ── 生成欄（原 LOG 位置；LOG 已遷往獨立「📜 系統日誌」頁）── */
+.gencol{flex:0.92;min-width:330px;display:flex;flex-direction:column;gap:10px}
+/* ── 📜 系統日誌頁（用戶拍板 2026-11-21：優化顯示——逐行着色＋篩選）── */
+.lgwrap{background:var(--term);border-radius:12px;padding:10px 12px;max-height:calc(100vh - 210px);overflow:auto}
+.lgline{white-space:pre-wrap;word-break:break-all;color:#9fd8a8;font:12.5px/1.7 Consolas,monospace;padding:1px 4px;border-radius:4px}
+.lgline:hover{background:rgba(255,255,255,.05)}
+.lgline.src{color:#7cc7ff}
+.lgline.pub{color:#f5c26b}
+.lgline.err{color:#ff8a8a;background:rgba(255,80,80,.08)}
+.lgline.ok{color:#7ee2a8}
+/* ── 視頻全域真縮圖（用戶拍板 2026-11-21：唔准净得 🎬 符號）── */
+video.th{object-fit:cover;background:#000;display:block;pointer-events:none}
+/* ── 帖子總覽 ── */
+.ovgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.ovcard{border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--card);cursor:pointer;position:relative}
+.ovcard:hover{border-color:#8a8f99}
+.ovcard .cv{width:100%;aspect-ratio:3/4;background:var(--soft) center/cover no-repeat}
+.ovcard .nobg{display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13px}
+.ovcard .bd{padding:9px 11px}
+.ovcard .tt{font-weight:700;font-size:13px;line-height:1.45}
+.ovcard .sn{font-size:11.5px;color:var(--hint);white-space:pre-wrap;line-height:1.6;margin-top:5px;max-height:66px;overflow:hidden}
+.ovcard .tg{font-size:11px;color:var(--link);margin-top:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ovcard .mt2{font-size:10.5px;color:var(--mut);margin-top:5px}
+/* ── 媒體庫頁（左右兩欄）── */
+.medwrap{display:flex;gap:12px;align-items:flex-start}
+.medleft{flex:0.95;min-width:360px;display:flex;flex-direction:column;gap:12px}
+.medright{flex:1.55;min-width:0;display:flex;flex-direction:column;gap:12px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:10px}
+.mcell{border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--card)}
+.mcell:hover{border-color:#8a8f99}
+.mcell .ph{width:100%;aspect-ratio:3/4;background:var(--soft) center/cover no-repeat;cursor:zoom-in;display:flex;align-items:center;justify-content:center;font-size:36px}
+.mcell .nm{font-size:10.5px;padding:6px 8px 0;color:var(--hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcell .ms{font-size:10px;color:var(--mut);padding:0 8px}
+.mcell .ops{display:flex;gap:4px;padding:6px;flex-wrap:wrap}
+.mdir{margin:6px 0;border:1px solid var(--line2);border-radius:10px;padding:6px 8px}
+.mdir summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--hint)}
+.mfile{display:flex;gap:8px;align-items:center;padding:4px 2px;border-bottom:1px solid var(--line2)}
+.mfile:last-child{border-bottom:0}
+.mfile img{width:34px;height:45px;object-fit:cover;border-radius:4px;border:1px solid var(--iline);flex:none;cursor:zoom-in}
+.mfile .vi{width:34px;height:45px;border-radius:4px;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none;font-size:16px;cursor:zoom-in}
+.mfile .mn{flex:1;min-width:0}
+.mfile .mn div{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mfile .ms{font-size:10px;color:var(--mut)}
+/* ── 生成隊列 ── */
+.gitem{border:1px solid var(--line2);border-radius:10px;padding:8px 10px;margin:6px 0;font-size:12px}
+.gitem .gp{color:var(--hint);font-size:11.5px;margin-top:3px;white-space:pre-wrap;max-height:44px;overflow:hidden}
+.gitem img{width:48px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--iline);cursor:zoom-in;float:left;margin:0 8px 4px 0}
+.gst{font-weight:700}.gst.q{color:#e67e22}.gst.g{color:#3498db}.gst.d{color:#27ae60}.gst.e{color:#e05c5c}
+#genstatus{white-space:pre-wrap;font-size:12px;background:var(--term);color:var(--termfg);border-radius:10px;padding:8px 10px;margin-top:8px;font-family:Consolas,monospace;min-height:30px}
+/* ── TAB（人設檔案頁分類；用戶拍板 2026-11-21）── */
+.tabs{display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:10px}
+.tab{border:1px solid var(--line2);border-radius:999px;padding:6px 14px;font-size:12.5px;cursor:pointer;background:var(--card);color:var(--ink)}
+.tab:hover{border-color:var(--red);color:var(--red)}
+.tab.on{background:var(--red);color:#fff;border-color:var(--red);font-weight:700}
+/* ── 人設檔案頁 ── */
+.cpre{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.8;color:var(--ink)}
+.cpre h4{margin:14px 0 4px;color:var(--red);font-size:13px}
+.cmedia img{width:104px;height:132px;object-fit:cover;border-radius:6px;border:1px solid var(--iline);display:block;cursor:zoom-in}
+.cmedia a{display:inline-block;margin:0 6px 10px;text-decoration:none;color:var(--mut);font-size:10px;width:104px}
+.cmedia a div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+textarea.cedit{min-height:70vh;font:12.5px/1.7 Consolas,"MS YaHei",monospace}
+/* ── 參考選擇modal（用戶拍板：工作台選參考圖/片）── */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:98;align-items:center;justify-content:center}
+#modal.on{display:flex}
+#modal .mbox{background:var(--card);border-radius:14px;max-width:92vw;width:1000px;height:52vh;max-height:52vh;display:flex;flex-direction:column;padding:14px 16px}
+#modal .mgrid2{overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:8px;padding:8px 0;flex:1}
+#modal .mi{border:2px solid var(--line2);border-radius:8px;overflow:hidden;cursor:pointer;position:relative;background:var(--soft)}
+#modal .mi:hover{border-color:#8a8f99}
+#modal .mi.sel{border-color:var(--red)}
+#modal .mi img{width:100%;height:130px;object-fit:cover;display:block}
+#modal .mi .vt{width:100%;height:130px;display:flex;align-items:center;justify-content:center;font-size:30px}
+#modal .mi .nm{font-size:9.5px;padding:3px 5px;color:var(--hint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#modal .mi.sel::after{content:'✓';position:absolute;right:4px;top:3px;color:#fff;background:var(--red);width:18px;height:18px;border-radius:50%;font-size:12px;display:flex;align-items:center;justify-content:center}
+/* ── Lightbox（支援 ←/→ 連看）── */
+#lb{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;z-index:99;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+#lb.on{display:flex}
+#lb .box{max-width:92vw;max-height:86vh;display:flex;align-items:center;justify-content:center}
+#lb img,#lb video{max-width:92vw;max-height:78vh;border-radius:8px;box-shadow:0 10px 60px rgba(0,0,0,.6)}
+#lb .cap{color:#cfd3da;font-size:12px;font-family:Consolas,monospace;max-width:90vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lb .x{position:absolute;top:14px;right:20px;color:#fff;font-size:30px;cursor:pointer;background:none;border:0}
+#lb .nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);color:#fff;font-size:34px;width:56px;height:88px;border-radius:12px;border:0;cursor:pointer;display:none}
+#lb .nav:hover{background:rgba(255,255,255,.28)}
+#lb .nav.prev{left:12px}#lb .nav.next{right:12px}
+#lb.multi .nav{display:block}
+</style>
+</head>
+<body>
+<header><b>🧋 Suki Post Studio</b>
+<nav style="display:flex;gap:6px">
+  <button class="primary tiny" id="nav_work" onclick="showView('work')">🛠 工作台</button>
+  <button class="ghost tiny" id="nav_overview" onclick="showView('overview')">🗂 帖子總覽</button>
+  <button class="ghost tiny" id="nav_media" onclick="showView('media')">🖼 媒體庫</button>
+  <button class="ghost tiny" id="nav_canon" onclick="showView('canon')">👧 Suki 人設檔案</button>
+  <button class="ghost tiny" id="nav_workflows" onclick="showView('workflows')">🔀 工作流</button>
+  <button class="ghost tiny" id="nav_engage" onclick="showView('engage')">🤝 自動互動</button>
+  <button class="ghost tiny" id="nav_logs" onclick="showView('logs')">📜 系統日誌</button>
+  <button class="ghost tiny" id="nav_settings" onclick="showView('settings')">⚙️ 系統設置</button>
+</nav>
+<span class="hspace">
+  <label class="meta">LLM</label><select id="llmsel" class="sel" onchange="pickLLM(this.value)" title="只切換使用哪個 LLM；管理與測試在系統設置頁"></select>
+  <label class="meta">Comfy</label><select id="comfsel" class="sel" onchange="pickComfy(this.value)" title="只切換使用哪個 ComfyUI；管理與測試在系統設置頁"></select>
+  <label class="meta">圖片工作流</label><select id="wf_g_img" class="sel" onchange="setGlobalWF('image',this.value)" title="全局圖片工作流：按正文生成媒體／一鍵自動設計／媒體庫生成一律跟呢度所選"></select>
+  <label class="meta">視頻工作流</label><select id="wf_g_vid" class="sel" onchange="setGlobalWF('video',this.value)" title="全局視頻工作流（含自拍專用 InstaPic 版）；所有生成位跟呢度"></select>
+  <span><span id="mcpdot" class="dot"></span>xhs-mcp</span>
+</span></header>
+<main id="work">
+  <!-- 帖檔 -->
+  <div class="rail">
+    <div class="card" style="padding:12px"><button class="primary" style="width:100%" onclick="newPost()">＋ 新帖</button></div>
+    <div class="card" style="padding:10px"><h3 style="margin:2px 4px 8px">出帖紀錄</h3><div id="plist" class="plist"></div></div>
+  </div>
+  <!-- 手機模擬（大／中／小）＋帖間前後 -->
+  <div class="phonecol">
+    <div class="row" style="gap:4px">
+      <span class="meta">模擬大小</span>
+      <button class="ghost tiny" id="ph_s" onclick="setPhone('s')">小</button>
+      <button class="ghost tiny" id="ph_m" onclick="setPhone('m')">中</button>
+      <button class="ghost tiny" id="ph_l" onclick="setPhone('l')">大</button>
+    </div>
+    <div class="phone" id="phone">
+      <div class="pstatus"><span>9:41</span><span>●●● wifi 🔋</span></div>
+      <div class="cover" id="cover" onclick="lbCover()"></div>
+      <div class="pbody">
+        <div class="ptitle" id="ptitle">（請選擇左側帖子，或點擊「＋ 新帖」）</div>
+        <div class="ptext" id="ptext"></div>
+        <div class="prow"><span>❤️ 点赞</span><span>⭐ 收藏</span><span>💬 評論</span></div>
+      </div>
+    </div>
+    <div class="row" style="gap:4px">
+      <button class="ghost tiny" id="prevpost" onclick="navPost(-1)">◀ 上一帖</button>
+      <button class="ghost tiny" id="nextpost" onclick="navPost(1)">下一帖 ▶</button>
+    </div>
+  </div>
+  <!-- 編輯（含媒體管理＋生成媒體）→ 自動設計 → 發布 → 歷史（單欄） -->
+  <div class="panel">
+    <div class="card">
+      <h3>當前選取：<span id="curid">—</span> <span id="curbadge"></span></h3>
+      <div class="meta" id="guard" style="margin-bottom:6px"></div>
+      <div class="row" style="margin-bottom:8px">
+        <span class="meta">帖子類型</span>
+        <select id="e_notetype" class="sel" onchange="onNoteType()" title="小紅書有兩種筆記：寫長文＝標題＋正文；寫想法＝直接用正文，不用標題">
+          <option value="long">📄 寫長文（標題＋正文，預設）</option>
+          <option value="idea">💭 寫想法（直接用正文，不用標題）</option>
+        </select>
+      </div>
+      <div id="titlewrap">
+      <div class="meta">標題 <span id="tcap"></span>（上限 20）</div><div class="bar"><i id="tbar"></i></div>
+      <input class="txt" id="e_title" placeholder="標題" oninput="syncPreview()">
+      </div>
+      <div style="height:6px"></div>
+      <div class="meta">正文 <span id="ccap"></span>（上限 1000，重點置於前 300 字）</div><div class="bar"><i id="cbar"></i></div>
+      <textarea id="e_content" placeholder="正文（無需輸入 # 標籤，標籤請填寫於下方欄位）" oninput="syncPreview()"></textarea>
+      <div style="height:6px"></div>
+      <input class="txt" id="e_tags" placeholder="標籤（以空格分隔，無需 #）" oninput="syncPreview()">
+      <div style="height:10px"></div>
+      <div class="meta"><strong>本帖媒體</strong>（第一張＝封面；按住縮圖可拖拉排序；✕ 刪除——刪除只係本帖移除，唔影響媒體庫）</div>
+      <div class="mmg" id="mmg"></div>
+      <div class="row" style="margin-top:6px">
+        <input class="txt" id="addimg" style="flex:1;min-width:220px" placeholder="手動加圖片／視頻路徑（例 media/suki/life/xxx-cover-3x4.jpg），再撳右邊">
+        <button class="ghost tiny" onclick="addImage()">＋ 加入</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="primary" onclick="savePost()">💾 保存修改（記入歷史）</button>
+        <button class="ghost" onclick="askClaude()">複製帖編號，交予 Claude</button>
+        <button class="danger" style="padding:6px 12px;font-size:12px" onclick="delPost()">🗑 刪除此帖</button>
+      </div>
+    </div>
+    <div class="card"><h3>本帖修改歷史／未處理指示</h3><div id="fbs"></div><div id="hist" class="hist"></div><div id="pubops" class="hist"></div></div>
+  </div>
+  <!-- 生成欄（原 LOG 位置；用戶拍板 2026-11-21：按正文生成＋一鍵自動設計放最右欄，LOG 遷往「📜 系統日誌」頁） -->
+  <div class="gencol">
+    <div class="card">
+      <h3>發布</h3>
+      <div class="row">
+        <input type="datetime-local" id="sched">
+        <button class="ghost" onclick="pubSched()">⏰ 定時發布</button>
+        <button class="primary" style="margin-left:auto" onclick="pub('')">▶ 立即發布</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span class="meta">发帖語言</span><select id="e_lang" class="sel"><option value="t">繁體中文（預設）</option><option value="s">简体中文</option></select>
+        <span class="meta">語體</span><select id="e_reg" class="sel"><option value="cy">廣東話口語（預設）</option><option value="sw">書面語</option></select>
+        <button class="ghost tiny" onclick="applyLang()" title="先保存本帖，再按以上語言／語體設定由 LLM 改寫全文">🔤 依此設定改寫</button>
+      </div>
+      <div style="height:8px"></div>
+      <div id="status">空閒。</div>
+    </div>
+    <div class="card" style="border-color:#d9c7f5">
+      <h3>🎨 按正文生成媒體（讀本帖正文＋場景提示 → 出圖／出視頻；每按一次＝另外增加一個，唔覆蓋）</h3>
+      <input class="txt" id="genhint" placeholder="場景／畫面提示（可留空＝按正文情境自行設計）。例：「用呢張參考圖嘅場景，換做 Suki 張面」「同閨蜜喺公園合照」「書桌俯視，溫書溫到瞓着」">
+      <div class="row" style="margin-top:8px">
+        <span class="meta">參考（可選）</span><button class="ghost tiny" onclick="pickRefs('work')">🖼 由媒體庫選參考圖／片</button>
+      </div>
+      <div class="chips" id="refchips"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="vio" id="btn_gen_img" onclick="genPost('image')">🖼 生成圖片（掛喺本帖）</button>
+        <button class="vio" id="btn_gen_vid" onclick="genPost('video')">🎬 生成視頻（掛喺本帖）</button>
+      </div>
+      <div class="meta" style="margin-top:6px">工作流＝表頭右上方全局所選（含「自拍專用」視頻工作流）。視頻用 MiniMax Ref2VA：冇選參考時自動帶面部正典做 REF。</div>
+    </div>
+    <div class="card" style="border-color:#d9c7f5">
+      <h3>🪄 一鍵自動設計（讀取 Suki 全部設定：AGENTS.md＋正典參考卡＋發帖日記 → 生成下一帖）</h3>
+      <div class="row" style="margin-bottom:6px">
+        <span class="meta">帖子類型</span>
+        <select id="auto_notetype" class="sel" onchange="onAutoNoteType()" title="寫想法＝純文字帖：只用正文唔用標題，呢單唔生成媒體">
+          <option value="auto">跟下方所選內容（默認）</option>
+          <option value="long">📄 寫長文（標題＋正文）</option>
+          <option value="idea">💭 寫想法（純文字，不用標題）</option>
+        </select>
+      </div>
+      <div class="meta" style="margin-bottom:6px">選擇本單生成內容（可複選，至少一項；按住拖動可調整執行順序）。承接只依<strong>已發布帖</strong>＋日記時間線（草稿唔入參考）：</div>
+      <div class="row" id="kindchips"></div>
+      <div style="height:8px"></div>
+      <input class="txt" id="autohint" placeholder="（可選）主題提示：例如「想寫溫書溫到睡著」「書桌抽屜」⋯⋯留空則依發帖日記時間線自動選題">
+      <div class="row" style="margin-top:8px">
+        <button class="vio" id="btn_auto" onclick="autoDesign()">✨ 開始自動設計</button>
+      </div>
+      <div class="meta" style="margin-top:6px">如正開啟空白草稿將直接填入，否則新建一帖（STATUS＝待校對）；所選參考一併提交（換面／合照類）；露臉與無臉均為合法構圖；工作流跟表頭全局所選。</div>
+    </div>
+  </div>
+</main>
+<!-- 🗂 帖子總覽 -->
+<div id="view_overview" style="display:none;padding:14px;flex-direction:column;gap:12px">
+  <div class="card">
+    <h3 style="margin-bottom:6px">🗂 帖子總覽（全部帖子的預覽卡片）</h3>
+    <div class="row">
+      <span class="meta">篩選</span>
+      <select id="ov_status" class="sel" onchange="loadOverview()"><option value="">全部狀態</option><option value="draft">草稿</option><option value="ready">待校對</option><option value="published">已發布</option><option value="scheduled">定時</option></select>
+      <span class="meta">排序</span>
+      <select id="ov_sort" class="sel" onchange="loadOverview()">
+        <option value="updated_desc">最近更新在前</option><option value="updated_asc">最舊更新在前</option>
+        <option value="id_asc">編號由小至大</option><option value="id_desc">編號由大至小</option>
+        <option value="pub_desc">發布時間在前（未發布排後）</option></select>
+      <button class="ghost tiny" onclick="loadOverview(true)">↻ 重新載入</button>
+      <span class="meta" id="ovinfo"></span>
+    </div>
+  </div>
+  <div class="ovgrid" id="ovgrid"></div>
+</div>
+<!-- 🖼 媒體庫（左右兩欄：左＝提示詞生成＋隊列／右＝庫瀏覽） -->
+<div id="view_media" style="display:none;padding:14px">
+  <div class="medwrap">
+    <div class="medleft">
+      <div class="card" style="border-color:#d9c7f5">
+        <h3>✨ 依提示詞生成（適配 Suki 設定，結果直接入庫；可連續提交多單，ComfyUI 自動排隊）</h3>
+        <textarea id="genprompt" style="min-height:110px" placeholder="描述想要的畫面，例如：「放學路上天橋側身回頭，傍晚，冬裝」「書桌 POV，溫書溫到瞓着」⋯⋯（人設畫質規格會自動附加，無需自己寫）"></textarea>
+        <div class="row" style="margin-top:8px">
+          <span class="meta">參考（圖工作流需有參考輸入；視頻用 Ref2VA 自動帶正典）</span><button class="ghost tiny" onclick="pickRefs('gen')">🖼 選參考</button>
+        </div>
+        <div class="chips" id="refchips_gen"></div>
+        <div class="row" style="margin-top:6px">
+          <label class="kchip" style="cursor:pointer"><input type="checkbox" id="g_img" checked> 🖼 圖片</label>
+          <label class="kchip" style="cursor:pointer"><input type="checkbox" id="g_vid"> 🎬 視頻</label>
+          <button class="vio" onclick="submitGen()">🚀 提交生成（排隊）</button>
+        </div>
+        <div id="genstatus">空閒——提交後結果會喺呢度同生成隊列顯示。</div>
+        <div class="meta" style="margin-top:6px">提交後可立即再寫下一單，唔使等。工作流＝表頭右上方全局所選；管理喺「⚙️ 系統設置」。</div>
+      </div>
+      <div class="card">
+        <div class="row"><h3 style="margin:0">生成隊列</h3><span style="margin-left:auto"><button class="ghost tiny" onclick="loadGen(true)">↻ 重新載入</button> <button class="ghost tiny" onclick="clearGen()">清空已完成記錄</button></span></div>
+        <div id="genq" style="max-height:58vh;overflow:auto" class="meta">（暫無生成任務）</div>
+      </div>
+    </div>
+    <div class="medright">
+      <div class="card">
+        <h3 style="margin-bottom:6px">🖼 媒體庫（media/）</h3>
+        <div class="meta">分類以分頁切換，可再篩類型／排序／搵字。<strong>📤 出帖</strong>＝新建草稿並掛上此圖（自動準備 3:4 封面版，並跳到工作台）；<strong>🪄 出文案</strong>＝按圖生成文案，可輸入提示（場景＋情緒）；<strong>刪除</strong>＝移入 media/.trash 可還原，之後不再納入任何參考。點擊縮圖以 Lightbox 檢視（←/→ 連看）；已發布帖子引用的圖片請謹慎刪除。</div>
+        <div class="row" style="margin-top:8px" id="medtabs"></div>
+        <div class="row" style="margin-top:6px">
+          <select id="med_type" class="sel" onchange="renderMed()"><option value="">全部類型</option><option value="img">圖片</option><option value="vid">視頻</option></select>
+          <select id="med_sort" class="sel" onchange="renderMed()">
+            <option value="time_desc">時間：新→舊</option><option value="time_asc">時間：舊→新</option>
+            <option value="name_asc">名稱：A→Z</option><option value="name_desc">名稱：Z→A</option>
+            <option value="size_desc">容量：大→小</option></select>
+          <input class="txt" id="med_q" style="flex:1;min-width:120px;max-width:220px" placeholder="搵字（檔名／路徑）" oninput="renderMed()">
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button class="ghost tiny" id="btn_grid" onclick="setMedMode('grid')">▦ 網格</button>
+          <button class="ghost tiny" id="btn_list" onclick="setMedMode('list')">☰ 列表</button>
+          <button class="ghost tiny" onclick="loadMedia(true)">↻ 重新載入</button>
+          <button class="ghost tiny" onclick="$('upfile').click()">⬆ 上傳媒體（入庫）</button>
+          <input type="file" id="upfile" accept="image/*,video/mp4,video/webm,video/quicktime" style="display:none" onchange="uploadMedia(this)">
+          <span class="meta" id="medinfo"></span>
+        </div>
+        <div class="meta" style="margin-top:4px">頁面每 3 秒自動重載媒體庫與生成隊列（新成品自動出現）。</div>
+      </div>
+      <div class="card" style="padding:12px"><div id="medbox" style="max-height:78vh;overflow:auto">載入中⋯⋯</div></div>
+    </div>
+  </div>
+</div>
+<!-- 👧 Suki 人設檔案（TAB 分類：AGENTS／日記／正典參考卡／媒體索引） -->
+<div id="view_canon" style="display:none;padding:14px;display:none;flex-direction:column;gap:12px">
+  <div class="card">
+    <h3>👧 Suki 人設檔案＝每次「自動設計／生成」提交給 LLM・ComfyUI 的唯一來源</h3>
+    <div class="meta">人設已分類做操作卡（<span style="font-family:Consolas">canon/*.md</span>）：<strong>每次生成時 AGENTS.md 全文＋全部操作卡一併提交</strong>（卡與 AGENTS 重複時以卡為準＝最新操作狀態）。編輯任何一卡保存後，請記得同 Claude 講一句同步返 AGENTS.md（diary／人設更新 → 對應卡要同時更新——用戶拍板 2026-11-21）。已刪除的媒體檔案，其描述行會自動从提交內容剔除。</div>
+  </div>
+  <div class="card">
+    <div class="tabs" id="cantabs"></div>
+    <h3 style="display:flex;align-items:center"><span id="cantitle"></span><span style="margin-left:auto;display:flex;gap:6px">
+      <button class="ghost tiny" id="btn_ce" onclick="editCanonCur()">✏️ 編輯</button>
+      <button class="primary tiny" id="btn_cs" style="display:none" onclick="saveCanonCur()">💾 保存</button>
+      <button class="ghost tiny" id="btn_cc" style="display:none" onclick="loadCanon()">取消</button>
+      <button class="ghost tiny" onclick="loadCanon()">↻ 重新載入</button></span></h3>
+    <div id="canbody"></div>
+    <textarea id="canedit" class="cedit" style="display:none"></textarea>
+  </div>
+</div>
+<!-- 🔀 工作流管理（快速切換使用中嘅工作流；路徑等設定喺系統設置頁管理） -->
+<div id="view_workflows" style="display:none;padding:14px;flex-direction:column;gap:12px">
+  <div class="card">
+    <h3>🔀 工作流（圖片／視頻生成用邊個 JSON——即場切換；新增／刪除／路徑喺「⚙️ 系統設置」嘅工作流管理表）</h3>
+    <div class="meta">生成圖片／視頻（自動設計、按正文生成、媒體庫隊列）會用呢度選定嘅預設工作流；每次生成前亦可以喺個按鈕旁臨時改揀。「參考圖」完全由你揀（系統唔補默認；要鎖面請將人物相排第一＝&lt;image1&gt;）。帶參考時若所選工作流唔食圖，會自動轉用「Qwen-Image 2.1 Edit 參考圖」（面相跟參考人物，2026-11-21 實測）或 H3 後備；視頻 Ref2VA 照常。</div>
+  </div>
+  <div class="card"><h3>🖼 圖片工作流</h3><div id="wflist_image" class="meta">載入中⋯⋯</div></div>
+  <div class="card"><h3>🎬 視頻工作流</h3><div id="wflist_video" class="meta">載入中⋯⋯</div></div>
+</div>
+<!-- 🤝 自動互動（養號＋朋友池：定時點讚／留言／回覆，開始即自動運行，可停止） -->
+<div id="view_engage" style="display:none;padding:14px;gap:12px;align-items:start;grid-template-columns:minmax(330px,1.08fr) minmax(290px,1fr)">
+<!-- 用戶拍板 2026-11-22：💬 自動私訊獨立做「左欄」，其他（養號引擎）放「右欄」（grid 兩欄，權重 1.08:1；窄螢幕经 media query 跌落單欄） -->
+ <div style="min-width:0;display:flex;flex-direction:column;gap:12px">
+  <div class="card">
+    <h3 style="display:flex;align-items:center">💬 自動私訊（自動回覆私信＝白名單制）<span id="dmbadge" class="badge b-draft" style="margin-left:8px">載入中</span></h3>
+    <div class="meta">小紅書冇官方私信 API——呢個功能用返 §17「帖文編輯法」同一個本地瀏覽器讀／發。<strong>規則（全部寫死喺引擎）</strong>：①只覆喺左邊剔咗「自動覆」嘅對象（新對象預設永不自動——由你揀邊個可自動私訊）；②每日同每個對象都有回覆上限，滿數即日收手，聽日自動 reset（一日覆少量似真人）；③只喺 Suki 生活節拍時段覆（跟右欄設定嘅時段表：返學時間、21:30 交機後至朝早 9 點永遠靜默——而家狀態喺下面顯示）；④回覆由 LLM 帶<strong>成段對話上下文</strong>生成（逐對像獨立保存喺 post-studio/dm/threads/，呢度有完整紀錄），先過 §12 安全同紅線掃描才發；⑤首次更新只做基線建檔，唔會覆舊帳。<strong>主開關預設 OFF——實測請用下面三個按鈕；人手「起草／發送」永遠可用。</strong></div>
+    <div class="meta" id="dmstatus" style="margin-top:8px">載入中⋯⋯</div>
+    <div class="row" style="margin-top:8px">
+      <button class="primary tiny" onclick="dmDo('/api/dm/check',{})">🔄 即刻更新私信（只讀入檔，唔會發送）</button>
+      <button class="ghost tiny" onclick="dmDo('/api/dm/pass',{dry:true})">🧪 dry-run（睇下會覆邊啲）</button>
+      <button class="ghost tiny" onclick="dmDo('/api/dm/pass',{})">▶ 即刻自動覆一輪（跟白名單＋上限）</button>
+      <span class="meta" id="dmact"></span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label class="meta"><input type="checkbox" id="dm_on"> 引擎運行期間自動跟住覆私信（建議先實測確定先開）</label>
+      <span class="meta">每日自動覆上限</span><input class="txt" id="dm_daily" style="width:52px" type="number">
+      <span class="meta">單一對象每日</span><input class="txt" id="dm_td" style="width:52px" type="number">
+      <span class="meta">昵稱含呢啲字永遠唔覆</span><input class="txt" id="dm_skip" style="flex:1;max-width:240px">
+      <button class="primary tiny" onclick="dmCfgSave()">💾 儲存私訊設定</button>
+    </div>
+    <div class="row" style="margin-top:10px;align-items:stretch">
+      <div style="width:350px;min-width:290px;border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:58vh" id="dmlist"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:320px">
+        <div class="meta" id="dmthead">（撳左邊任一對象，睇完整對話紀錄——每個對像一個檔案，上下文完整保留）</div>
+        <div id="dmthread" style="flex:1;min-height:30vh;max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--term);color:var(--termfg)"></div>
+        <div class="row">
+          <input class="txt" id="dminput" style="flex:1" placeholder="以 Suki 身份直接覆呢位網友（人手發送唔使等自動功能開）⋯⋯">
+          <button class="ghost tiny" onclick="dmDraft()">✍️ 跟上下文起草</button>
+          <button class="primary tiny" onclick="dmSendNow()">📤 發送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+ </div>
+ <div style="min-width:0;display:flex;flex-direction:column;gap:12px">
+  <div class="card">
+    <h3>🤝 自動互動＝小紅書「養號」＋朋友池入口（AGENTS.md §11A.D／§16B 嘅執行器）</h3>
+    <div class="meta">為什麼要做：平台把「真實活躍使用者」排位更高——每日適量瀏覽、點讚、真誠評論會提升其後發文嘅初始流量池；評論回覆權重最高（×4），所以<strong>回覆自己帖下嘅新評論永遠優先</strong>。避坑已寫入引擎：<strong>每日有上限＋動作之間 randomized 分鐘級間隔</strong>（過多／機械節奏＝偵測為機器人，有限流風險）；評論先攞正文、逐條由 LLM 以 Suki 口吻認真生成（不重複、不套話、不求關注、守私隱紅線）；<strong>只在「生活節拍時段」運行</strong>（午間＋晚 21:10 前，21:30 交機後至早上 9 點永不動作）；唔主線 follow、敏感題目自動跳過；私信＝白名單制（喺**左欄 💬 自動私訊**剔選，未剔嘅永遠唔會自動覆）；同一筆記永遠唔會重複互動。運行中任何时候可停止；登入失效會自動停止並提示。</div>
+  </div>
+  <div class="card">
+    <h3 style="display:flex;align-items:center">狀態 <span id="engbadge" class="badge b-draft" style="margin-left:8px">未啟動</span>
+      <span style="margin-left:auto;display:flex;gap:6px">
+        <button class="primary tiny" id="btn_eng_start" onclick="engStart()">▶ 開始</button>
+        <button class="ghost tiny" id="btn_eng_stop" onclick="engStop()">⏹ 停止</button>
+        <button class="ghost tiny" onclick="engRound(true)">🧪 試一輪（dry-run：只睇做乜，唔會真係動作）</button>
+        <button class="ghost tiny" onclick="engRound(false)">⚡ 即刻真跑一輪</button>
+      </span></h3>
+    <div id="engstatus" class="meta">載入中⋯⋯</div>
+    <div class="row" style="margin-top:8px" id="engcounts"></div>
+  </div>
+  <div class="card">
+    <h3>設定（改完撳「儲存設定」；按「開始」會用目前頁面上嘅設定）</h3>
+    <div class="row">
+      <span class="meta" style="width:120px">工作日時段</span><input class="txt" id="eng_ww" style="flex:1;max-width:340px" placeholder="12:20-13:10,20:30-21:10">
+      <span class="meta" style="width:120px">假日時段</span><input class="txt" id="eng_we" style="flex:1;max-width:340px" placeholder="11:00-13:00,15:30-17:00,20:00-21:00">
+    </div>
+    <div class="row" style="margin-top:6px">
+      <span class="meta">動作間隔（秒）</span><input class="txt" id="eng_smin" style="width:64px" type="number">–<input class="txt" id="eng_smax" style="width:64px" type="number">
+      <span class="meta">輪間隔（秒）</span><input class="txt" id="eng_rmin" style="width:70px" type="number">–<input class="txt" id="eng_rmax" style="width:70px" type="number">
+      <span class="meta">單次時長上限（分鐘）</span><input class="txt" id="eng_sess" style="width:64px" type="number">
+    </div>
+    <div class="row" style="margin-top:6px">
+      <span class="meta" style="width:120px">每日上限</span>
+      <span class="meta">讚</span><input class="txt" id="eng_dl" style="width:56px" type="number">
+      <span class="meta">收藏</span><input class="txt" id="eng_df" style="width:56px" type="number">
+      <span class="meta">評論</span><input class="txt" id="eng_dc" style="width:56px" type="number">
+      <span class="meta">回覆</span><input class="txt" id="eng_dr" style="width:56px" type="number">
+      <span class="meta" style="width:120px">每輪上限</span>
+      <span class="meta">讚</span><input class="txt" id="eng_rl" style="width:56px" type="number">
+      <span class="meta">評</span><input class="txt" id="eng_rc" style="width:56px" type="number">
+      <span class="meta">覆</span><input class="txt" id="eng_rr" style="width:56px" type="number">
+    </div>
+    <div class="row" style="margin-top:6px">
+      <span class="meta">評論概率 %</span><input class="txt" id="eng_cr" style="width:56px" type="number">
+      <span class="meta">收藏概率 %</span><input class="txt" id="eng_fr" style="width:56px" type="number">
+      <span class="meta">搜索來源比例 %（餘額＝首頁 feed）</span><input class="txt" id="eng_sr" style="width:56px" type="number">
+    </div>
+    <div style="height:6px"></div>
+    <div class="meta">搜尋關鍵詞（逗號分隔，輪流用——同龄／同領域為原則，呢個同時係朋友池入口）</div>
+    <textarea id="eng_kw" style="min-height:44px"></textarea>
+    <div class="meta" style="margin-top:6px">跳過題目黑名單（標題含呢啲字就唔碰）</div>
+    <input class="txt" id="eng_bl">
+    <div class="row" style="margin-top:8px"><button class="primary" onclick="engSave()">💾 儲存設定</button><span class="meta" id="engsave"></span></div>
+  </div>
+  <div class="card">
+    <h3>互動日誌（每 3 秒自動更新）</h3>
+    <pre id="englog" style="white-space:pre-wrap;word-break:break-all;background:var(--term);color:var(--termfg);border-radius:10px;padding:10px 12px;font:12px/1.6 Consolas,monospace;max-height:46vh;overflow:auto">（未開始）</pre>
+  </div>
+ </div>
+</div>
+<!-- ⚙️ 系統設置 -->
+<div id="view_settings" style="display:none;padding:14px;flex-direction:column;gap:12px">
+  <div class="card">
+    <h3>🎨 介面</h3>
+    <div class="row">
+      <span class="meta">主題</span>
+      <select id="themesel" class="sel" onchange="setTheme(this.value==='dark')"><option value="light">淺色</option><option value="dark">深色</option></select>
+      <span class="meta">顯示大小</span>
+      <select id="fz" class="sel" onchange="setZoom(this.value)">
+        <option value="1">1 最小</option><option value="2">2 較小</option><option value="3">3 標準</option>
+        <option value="4">4 較大</option><option value="5">5 大</option><option value="6">6 特大（預設）</option><option value="7">7 最大</option></select>
+      <span class="meta">設定記住喺瀏覽器（localStorage）</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🧠 LLM 管理（文案模型；自動設計／生成／按圖出文案都用呢度揀嘅 active LLM。快速切換喺表頭下拉）</h3>
+    <table id="llmtbl"></table>
+    <div class="row" style="margin-top:8px">
+      <button class="tiny" onclick="addLLM()">＋ 新增 LLM</button>
+      <button class="ghost tiny" onclick="saveSettings()">儲存設定</button>
+      <span class="meta" id="llmtest"></span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🖼 ComfyUI 管理（圖片／視頻生成服務）</h3>
+    <table id="comftbl"></table>
+    <div class="row" style="margin-top:8px">
+      <button class="tiny" onclick="addComfy()">＋ 新增 ComfyUI</button>
+      <button class="ghost tiny" onclick="saveSettings()">儲存設定</button>
+      <span class="meta" id="comftest"></span>
+    </div>
+    <div class="meta" style="margin-top:8px">「視頻工作流」欄＝舊式 fallback（建議改用下面「工作流管理」）。</div>
+  </div>
+  <div class="card">
+    <h3>🔀 工作流管理（生成圖片／視頻用嘅 ComfyUI 工作流 JSON；切換使用喺「🔀 工作流」頁）</h3>
+    <table id="wftbl"></table>
+    <div class="row" style="margin-top:8px">
+      <button class="tiny" onclick="addWF('image')">＋ 新增圖片工作流</button>
+      <button class="tiny" onclick="addWF('video')">＋ 新增視頻工作流</button>
+      <button class="ghost tiny" onclick="saveSettings()">儲存設定</button>
+      <span class="meta" id="wftest">路徑相對項目根（例 <span style="font-family:Consolas">tools\wf_template.json</span>）；JSON 需為 ComfyUI API 格式。提示詞欄會自動識別（prompt／text／positive）；含 LoadImage 節點者支援「選參考圖」。</span>
+    </div>
+  </div>
+  <!-- 🔌 小紅書操作抽象層（用戶 2026-11-22：「將小紅書的操作做成抽象層，之後有新方法可以使用」→ §11A.K）-->
+  <div class="card">
+    <h3>🔌 小紅書操作抽象層（xhs_core）——所有平台操作經統一介面，渠道＝可插拔驅動</h3>
+    <div class="meta" style="margin-bottom:8px">而家接咗兩個驅動：<b>xiaohongshu-mcp（API）</b>負責 feed／搜索／筆記／互動／發布；<b>本地瀏覽器（CDP）</b>負責私信／刪除（MCP 冇嘅能力）。之後有新方法（官方 API、Appium 真機、MCP 新版私信工具⋯）＝喺 <span style="font-family:Consolas">post-studio/xhs_core.py</span> 新增一個 Driver 即插得入，業務碼零改動。優先序可喺 <span style="font-family:Consolas">settings.json → "xhs_priority"</span> 改。</div>
+    <div class="row" style="margin-bottom:8px">
+      <button class="ghost tiny" onclick="loadXHSStatus()">↻ 重新檢測連線</button>
+      <span class="meta" id="xhsinfo"></span>
+    </div>
+    <div id="xhsdrivers" class="row" style="flex-wrap:wrap;gap:8px;align-items:stretch"></div>
+    <table id="xhstbl" style="margin-top:8px"></table>
+  </div>
+</div>
+<!-- 📜 系統日誌（由工作台 LOG 欄遷入；用戶拍板 2026-11-21：優化顯示——逐行着色＋來源／搵字篩選） -->
+<div id="view_logs" style="display:none;padding:14px;flex-direction:column;gap:12px">
+  <div class="card">
+    <h3 style="margin-bottom:6px">📜 系統日誌（自動設計／發布流水記錄，每 3 秒自動更新）</h3>
+    <div class="row">
+      <span class="meta">來源</span>
+      <select id="lg_src" class="sel" onchange="renderLogs()"><option value="">全部</option><option value="auto">[auto] 自動設計／生成</option><option value="pub">[pub] 發布</option></select>
+      <input class="txt" id="lg_q" style="flex:1;min-width:140px;max-width:280px" placeholder="搵字篩選（例如 error、refine、#013）" oninput="renderLogs()">
+      <label class="meta"><input type="checkbox" id="lg_desc" checked onchange="renderLogs()"> 最新在上</label>
+      <label class="meta"><input type="checkbox" id="lg_auto" checked> 自動更新</label>
+      <button class="ghost tiny" onclick="LOGS=null;pollLogs(true)">↻ 即刻更新</button>
+      <span class="meta" id="lginfo"></span>
+    </div>
+    <div class="meta" style="margin-top:4px">紅＝失敗／警告，綠＝成功，黃＝發布操作，藍＝自動設計流水。原始檔案：post-studio/auto-log.txt・posts/publish-log.txt。</div>
+  </div>
+  <div class="lgwrap" id="logbox">載入中⋯⋯</div>
+</div>
+<!-- 參考選擇 modal（由媒體庫揀圖／片做參考） -->
+<div id="modal">
+  <div class="mbox">
+    <h3 style="margin:0 0 4px">🖼 由媒體庫揀選參考圖／片（再点取消；上限 3 張）</h3>
+    <div class="row">
+      <input class="txt" id="mq" style="flex:1;max-width:280px" placeholder="搵字快速篩選（例：face、card1、life-）" oninput="renderPicker()">
+      <span class="meta" id="mpickinfo"></span>
+      <span style="margin-left:auto"></span>
+      <button class="ghost tiny" onclick="closePicker()">取消</button>
+      <button class="primary tiny" onclick="confirmPicker()">✔ 使用所選</button>
+    </div>
+    <div class="mgrid2" id="mpick"></div>
+  </div>
+</div>
+<!-- Lightbox（←/→ 連看當前清單） -->
+<div id="lb" onclick="if(event.target.id==='lb'||event.target.className==='box')closeLB()">
+  <button class="x" onclick="closeLB()">×</button>
+  <button class="nav prev" onclick="event.stopPropagation();lbNav(-1)">‹</button>
+  <div class="box" id="lbbox"></div>
+  <button class="nav next" onclick="event.stopPropagation();lbNav(1)">›</button>
+  <div class="cap" id="lbcap"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isVid=p=>/\.(mp4|webm|mov)$/i.test(p||'');
+let CUR=null, SETTINGS=null, LIST=[], VIEW='work';
+let CURIMG=[], CURREFS=[], GENREFS=[];   // 本帖媒體／工作台參考／媒體庫生成參考
+const BNAME={draft:'草稿',ready:'待校對',published:'已發布',scheduled:'定時'};
+function badge(s){return `<span class="badge b-${s||'draft'}">${BNAME[s]||'草稿'}</span>`}
+function say(t){$('status').textContent='['+new Date().toLocaleTimeString()+'] '+t}
+function gsay(t){$('genstatus').textContent='['+new Date().toLocaleTimeString()+'] '+t}
+const BANNED=['呂中','潤財','中二','中一','中三','新帳號','13歲','旭輝','陳蘇琪','SoStupid','東華三院','宝盈','寶盈','将军澳','寶琳','宝琳','坑口','調景嶺'];
+const TAGBAN=['將軍澳','将军澳','宝琳','寶琳','popcity','坑口','調景嶺','调景岭','觀塘','观塘','順景','新都城','慧安','煜街','毓雅'];
+function guardScan(){
+  const whole=($('e_title').value)+($('e_content').value);
+  const hit=BANNED.filter(b=>whole.includes(b));
+  const thit=$('e_tags').value.trim().split(/\s+/).filter(t=>t&&TAGBAN.some(b=>t.toLowerCase().includes(b)));
+  $('guard').innerHTML=hit.length?('⛔ 私隱紅線：內容包含「'+hit.join('、')+'」')
+    :(thit.length?('⛔ 標籤含地區名稱＝個人資料：「'+thit.join('、')+'」——標籤不得使用，請改用身份詞或城市級（香港）')
+    :((whole.trim()||$('e_tags').value.trim())?'✅ 紅線掃描通過':''));
+}
+/* ── 手機模擬＋本帖媒體（数组 CURIMG；拖拉排序／刪除喺 media manager）── */
+function syncPreview(){
+  if(!$('e_title').value&&!CUR)return;
+  const t=$('e_title').value, c=$('e_content').value;
+  const tags=$('e_tags').value.trim().split(/\s+/).filter(Boolean);
+  const idea=$('e_notetype')&&$('e_notetype').value==='idea';
+  $('ptitle').style.display=idea?'none':'';
+  $('ptitle').textContent=idea?'':(t||'（尚無標題）');
+  let html=esc(c);
+  if(tags.length)html+='<br><br>'+tags.map(x=>'<span class="tag">#'+esc(x)+'[话题]#</span>').join(' ');
+  $('ptext').innerHTML=html;
+  $('tcap').textContent=t.length+'/20';$('ccap').textContent=c.length+'/1000';
+  $('tbar').style.width=Math.min(100,t.length/20*100)+'%';$('tbar').className=t.length>20?'over':t.length>15?'warn':'';
+  $('cbar').style.width=Math.min(100,c.length/1000*100)+'%';$('cbar').className=c.length>1000?'over':' ';
+  guardScan();
+  window.__COVERS=CURIMG;
+  const im=CURIMG.filter(p=>!isVid(p));
+  window.__COVER=im[0]||CURIMG[0]||'';
+  const covEl=$('cover');covEl.innerHTML='';
+  if(window.__COVER&&isVid(window.__COVER)){covEl.style.backgroundImage='none';covEl.insertAdjacentHTML('beforeend',`<video src="/img?path=${encodeURIComponent(window.__COVER)}" autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;pointer-events:none;display:block"></video>`);}
+  else covEl.style.backgroundImage=window.__COVER?`url(/img?path=${encodeURIComponent(window.__COVER)})`:'none';
+  renderMMG();
+}
+/* 帖子類型（寫想法＝直接用正文唔用標題；寫長文＝標題＋正文）——用戶拍板 2026-11-21 */
+function onNoteType(){
+  const idea=$('e_notetype').value==='idea';
+  $('titlewrap').style.display=idea?'none':'';
+  syncPreview();
+}
+function renderMMG(){
+  $('mmg').innerHTML=CURIMG.map((p,i)=>`<div class="mmi" draggable="true" data-i="${i}"
+      ondragstart="mmDrag(event,${i})" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="mmDrop(event,${i})"
+      onclick="openLBArr('__COVERS',${i})">
+      ${i===0?'<span class="cbadge">封面</span>':''}
+      ${isVid(p)?`<video src="/img?path=${encodeURIComponent(p)}#t=0.5" preload="metadata" muted playsinline onerror="this.outerHTML='<div class=vtag>🚫</div>'"></video>`:`<img src="/img?path=${encodeURIComponent(p)}" onerror="this.outerHTML='<div class=vtag>🚫</div>'">`}
+      <button class="del" title="由本帖移除（唔刪媒體庫檔案）" onclick="event.stopPropagation();delMediaFromPost(${i})">✕</button>
+    </div>`).join('')||'<span class="meta">（本帖未掛任何媒體——可用下方「🎨 按正文生成媒體」、媒體庫「📤 出帖」或手動加路徑）</span>';
+}
+let MMDRAG=null;
+function mmDrag(e,i){MMDRAG=i;e.dataTransfer.effectAllowed='move';}
+function mmDrop(e,i){e.preventDefault();if(MMDRAG===null||MMDRAG===i)return;
+  const it=CURIMG.splice(MMDRAG,1)[0];CURIMG.splice(i,0,it);MMDRAG=null;
+  syncPreview();persistMedia(false);}
+function delMediaFromPost(i){CURIMG.splice(i,1);syncPreview();persistMedia(true);}
+function addImage(){
+  const v=$('addimg').value.trim();if(!v)return say('請先輸入路徑。');
+  CURIMG.push(v);$('addimg').value='';syncPreview();persistMedia(true);
+}
+async function persistMedia(log){ // 排列／刪圖即時保存；純排列唔入版本歷史（no_history）
+  if(!CUR)return;
+  await fetch('/api/post/save',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:CUR.id,images:CURIMG,no_history:!log})});
+  if(log)say('已更新本帖媒體（'+CURIMG.length+' 個）。');
+}
+/* ── 參考選擇（用戶拍板：工作台／媒體庫可選參考圖/片——換面／合照等；工作流有參考輸入先生效）── */
+let PICKTARGET='work', PICKSEL=[], PICKFILES=[];
+function renderChips(target,arr,el){
+  $(el).innerHTML=arr.map((p,i)=>`<span class="chip">${isVid(p)?`<video class="th" src="/img?path=${encodeURIComponent(p)}#t=0.5" preload="metadata" muted playsinline style="width:20px;height:26px;border-radius:3px">`:''}${isVid(p)?'':`<img src="/img?path=${encodeURIComponent(p)}">`}${esc(p.split('/').pop())}<span class="x" onclick="dropRef('${target}',${i})">✕</span></span>`).join('');
+}
+function dropRef(target,i){
+  if(target==='work'){CURREFS.splice(i,1);renderChips('work',CURREFS,'refchips');}
+  else{GENREFS.splice(i,1);renderChips('gen',GENREFS,'refchips_gen');}
+}
+async function pickRefs(target){
+  PICKTARGET=target;PICKSEL=(target==='work'?CURREFS:GENREFS).slice();
+  if(!MEDATA){try{MEDATA=await(await fetch('/api/medialib')).json();}catch(e){return say('讀取媒體庫失敗');}}
+  PICKFILES=(MEDATA.files||[]).filter(f=>!f.rel.startsWith('media/.trash'));
+  $('mq').value='';renderPicker();$('modal').classList.add('on');
+}
+function renderPicker(){
+  const q=$('mq').value.trim().toLowerCase();
+  const rows=q?PICKFILES.filter(f=>f.rel.toLowerCase().includes(q)):PICKFILES;
+  $('mpickinfo').textContent='已揀 '+PICKSEL.length+'/3 · '+rows.length+' 個可選';
+  $('mpick').innerHTML=rows.map(f=>{const rel=f.rel,abs=(MEDATA.root||'')+'/'+rel;
+    return `<div class="mi ${PICKSEL.includes(rel)?'sel':''}" onclick="toggleRef('${esc(rel)}')">
+      ${isVid(rel)?`<video class="th" src="/img?path=${encodeURIComponent(abs)}#t=0.5" preload="metadata" muted playsinline style="width:100%;height:130px" onerror="this.outerHTML='<div class=vt>🎬</div>'"></video>`:`<img loading="lazy" src="/img?path=${encodeURIComponent(abs)}" onerror="this.outerHTML='<div class=vt>🖼</div>'">`}
+      <div class="nm" title="${esc(rel)}">${esc(f.name)}</div></div>`;}).join('');
+}
+function toggleRef(rel){
+  if(PICKSEL.includes(rel))PICKSEL=PICKSEL.filter(x=>x!==rel);
+  else{if(PICKSEL.length>=3)return renderPicker();PICKSEL.push(rel);}
+  renderPicker();
+}
+function confirmPicker(){
+  if(PICKTARGET==='work'){CURREFS=PICKSEL.slice();renderChips('work',CURREFS,'refchips');}
+  else{GENREFS=PICKSEL.slice();renderChips('gen',GENREFS,'refchips_gen');}
+  closePicker();
+}
+function closePicker(){$('modal').classList.remove('on');}
+/* ── 按正文生成媒體（掛本帖；每次按＝加一個）── */
+function genPost(kind){
+  if(!CUR)return say('尚未選擇帖子。');
+  if(AUTOINT)return say('🎨 已有生成任務進行中，請等待完成。');
+  busyBeat((kind==='video'?'🎬 按正文生成視頻':'🖼 按正文生成圖片')+'（本帖正文＋提示已提交）','生成後會自動掛喺本帖媒體（唔覆蓋舊圖）'+(CURREFS.length?'；參考：'+CURREFS.map(x=>x.split('/').pop()).join('、'):''));
+  $('btn_gen_img').disabled=true;$('btn_gen_vid').disabled=true;
+  (async()=>{
+    let r;
+    try{r=await(await fetch('/api/post/gen_image',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:CUR.id,kind,hint:$('genhint').value.trim(),refs:CURREFS})})).json();}
+    catch(e){r={ok:false,error:'請求失敗：'+e+'（服務可能已停止）'};}
+    clearInterval(AUTOINT);AUTOINT=null;$('btn_gen_img').disabled=false;$('btn_gen_vid').disabled=false;
+    if(!r.ok)return say('❌ '+String(r.error||JSON.stringify(r)).slice(0,400)+(r.prompt?('\n（prompt 已生成，見 LOG）'):''));
+    say('⏱ 用時 '+(r.secs!=null?r.secs+' 秒':'-')+'\n✅ 已為帖 #'+r.id+' 新增'+(kind==='video'?'視頻':'圖片')+'（本帖現共 '+r.images.length+' 個媒體）'
+      +(r.reason?('\n📌 '+r.reason):'')+'\n可拖拉排序／設封面；唔要就 ✕ 刪走。');
+    openPost(r.id);refreshList();loadMedia(true);
+  })();
+}
+/* ── 刪除帖子（已發布＝二次確認＋嘗試喺小紅書一齊刪）── */
+async function delPost(){
+  if(!CUR)return say('尚未選擇帖子。');
+  const isPub=CUR.status==='published';
+  if(isPub){
+    if(!confirm('帖子 #'+CUR.id+' 已發布。刪除會同時喺小紅書（創作平台）刪除該筆記。\n確定刪除？'))return;
+    if(!confirm('二次確認：刪除後唔可還原（posts/deleted.log 會保留紀錄）。確認刪除 #'+CUR.id+'？'))return;
+  }else if(!confirm('確定刪除草稿 #'+CUR.id+'？（未發布，淨係刪本地帖檔）'))return;
+  say('刪除中⋯⋯'+(isPub?'（會嘗試經瀏覽器喺創作平台刪除，可能要等一秒）':''));
+  let r;try{r=await(await fetch('/api/post/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:CUR.id,platform:isPub})})).json();}
+  catch(e){return say('❌ 刪除請求失敗：'+e);}
+  if(!r.ok)return say('❌ '+(r.error||JSON.stringify(r)));
+  say((r.platform&&r.platform.done)?'✅ #'+CUR.id+' 已刪除（平台：'+r.platform.detail+'）'
+    :'✅ 帖檔已刪除 #'+CUR.id+(isPub?('\n⚠️ 平台端：'+(r.platform&&r.platform.detail||'請喺 App 手動刪除')):''));
+  CUR=null;CURIMG=[];await refreshList();
+  openPost((LIST[LIST.length-1]||{}).id||'');
+}
+function loadEditor(p){
+  CUR=p;CURIMG=(p.images||[]).slice();
+  $('curid').textContent='#'+p.id;
+  $('curbadge').innerHTML=badge(p.status)+(p.published_at?` <span class="meta">發布於 ${p.published_at}</span>`:'')+(p.scheduled_at?` <span class="meta">定時 ${p.scheduled_at}</span>`:'');
+  $('e_title').value=p.title||'';$('e_content').value=p.content||'';
+  $('e_tags').value=(p.tags||[]).join(' ');
+  $('e_lang').value=p.lang||'t';$('e_reg').value=p.register||'cy';
+  $('e_notetype').value=(p.note_type==='idea')?'idea':'long';
+  $('titlewrap').style.display=(p.note_type==='idea')?'none':'';
+  syncPreview();navPostBtns();
+  $('fbs').innerHTML=(p.feedback||[]).slice(-6).reverse().map(f=>`<div class="fb ${f.handled?'':'unhandled'}">${f.ts} ${f.handled?'✓':'⏳'} ${esc(f.text)}</div>`).join('');
+  $('hist').innerHTML=(p.history||[]).slice().reverse().map((h,i)=>`── 版本 ${p.history.length-i} · ${h.ts} · ${esc((h.content||'').slice(0,40))}…`).join('\n')||'（本稿為 v1）';
+  $('pubops').innerHTML=(p.publish_ops||[]).slice().reverse().map(o=>`· ${o.ts} ${o.schedule?('定時 '+o.schedule):'即時'} → ${o.result} ${esc((o.detail||'').slice(0,50))}`).join('\n')||'';
+}
+/* 上一頁／下一頁：帖間跳轉（順序按編號） */
+function navPost(dir){
+  const ids=LIST.map(p=>p.id).sort();const i=ids.indexOf(CUR?CUR.id:'');
+  const j=i+dir;if(j<0||j>=ids.length)return;
+  openPost(ids[j]);
+}
+function navPostBtns(){
+  const ids=LIST.map(p=>p.id).sort();const i=CUR?ids.indexOf(CUR.id):-1;
+  $('prevpost').disabled=i<=0;$('nextpost').disabled=i<0||i>=ids.length-1;
+}
+let LISTSIG='';
+async function refreshList(){
+  let ps;try{ps=await(await fetch('/api/posts')).json();}catch(e){return}
+  const sig=JSON.stringify(ps)+'|'+(CUR?CUR.id:'');
+  LIST=ps;
+  if(sig===LISTSIG)return;LISTSIG=sig;
+  $('plist').innerHTML=LIST.slice().reverse().map(p=>`
+    <div class="pitem ${CUR&&CUR.id===p.id?'sel':''}" onclick="openPost('${p.id}')">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        ${p.thumb?(isVid(p.thumb)?`<video class="th" src="/img?path=${encodeURIComponent(p.thumb)}#t=0.5" preload="metadata" muted playsinline style="width:42px;height:56px;border-radius:6px;border:1px solid var(--iline);flex:none" onerror="this.style.display='none'"></video>`:`<img src="/img?path=${encodeURIComponent(p.thumb)}" style="width:42px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--iline);flex:none;cursor:zoom-in" onclick="event.stopPropagation();openLB('${esc(p.thumb)}')" onerror="this.style.display='none'">`):''}
+        <div style="min-width:0;flex:1">
+          <div class="t">${badge(p.status)}${p.note_type==='idea'?'<span class="badge" style="background:#8e44ad">💭想法</span>':''}${esc(p.title||'（無標題草稿）')}</div>
+          <div class="pmeta">#${p.id} · 修改於 ${p.updated||'-'}${p.pending_fb?` · <span class="fbn">${p.pending_fb} 條指示未處理</span>`:''}</div>
+        </div>
+      </div>
+    </div>`).join('')||'<div class="meta">（尚無帖子）</div>';
+  navPostBtns();
+}
+async function openPost(id){const p=await(await fetch('/api/post?id='+id)).json();if(!p||p.error)return;loadEditor(p);refreshList();}
+async function newPost(){const p=await(await fetch('/api/post/new',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).json();say('已建立草稿 #'+p.id+'。可點擊「✨ 開始自動設計」，或告知 Claude「起草第 '+p.id+' 帖」。');loadEditor(p);refreshList();}
+async function savePost(){
+  if(!CUR)return say('尚未選擇帖子。'),false;
+  const tags=$('e_tags').value.trim().split(/[\s,]+/).filter(Boolean);
+  const nt=$('e_notetype').value;
+  const r=await(await fetch('/api/post/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:CUR.id,title:nt==='idea'?'':$('e_title').value,content:$('e_content').value,tags,images:CURIMG,lang:$('e_lang').value,register:$('e_reg').value,note_type:nt})})).json();
+  say(r.ok?('✅ 已保存 #'+CUR.id+'（舊版本已記入歷史）'):('❌ '+JSON.stringify(r)));openPost(CUR.id);return r.ok;
+}
+function askClaude(){if(CUR)copy(('#'+CUR.id+' '+CUR.title).trim());say('已複製帖子編號——請粘貼給 Claude 並說明修改要求。');}
+let AUTOINT=null;
+function busyBeat(title,extra){const t0=Date.now();let srv='';
+  AUTOINT=setInterval(async()=>{const s=Math.floor((Date.now()-t0)/1000);
+    try{const pr=await(await fetch('/api/progress')).json();if(pr&&pr.stage)srv='\n⚙️ '+pr.stage+(pr.detail?('：'+pr.detail):'');}catch(e){}
+    $('status').textContent='['+new Date().toLocaleTimeString()+'] '+title+'｜已執行 '+s+' 秒 '+(s%2?'⏳':'⌛')+(extra?'\n'+extra:'')+srv;},1000);
+  return t0;}
+function refineRun(text){
+  if(!CUR)return say('尚未選擇帖子。');
+  if(AUTOINT)return say('🪄 已有任務進行中，請等待完成後再修改。');
+  busyBeat('🪄 讀取完整人設 → 跟指示重寫文案＋重新生成圖片','指示：'+text+'（本地模型＋圖片生成，通常需要 1–3 分鐘，請勿關閉頁面）');
+  (async()=>{
+    let r;
+    try{r=await(await fetch('/api/refine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:CUR.id,text})})).json();}
+    catch(e){r={ok:false,error:'請求失敗：'+e+'（Post Studio 服務可能已停止，請重新執行 start-post-studio.bat）'};}
+    clearInterval(AUTOINT);AUTOINT=null;
+    if(!r.ok)return say('❌ '+String(r.error||JSON.stringify(r)).slice(0,400));
+    say('⏱ 用時 '+(r.secs!=null?r.secs+' 秒':'-')+'\n✅ #'+r.id+' 已跟指示完成修改（文案'+(r.image?'＋圖片':'')+'）'
+      +(r.banned&&r.banned.length?('\n⛔ 仍含紅線詞：'+r.banned.join('、')+'——請先手動修正再發布'):'\n✅ 紅線掃描通過')
+      +(r.reason?('\n📌 '+r.reason):'')+(r.image_detail?('\n'+r.image_detail):'')+'\n請檢視手機模擬，確認後即可發布。');
+    openPost(r.id);refreshList();
+  })();
+}
+async function applyLang(){
+  if(!CUR)return say('尚未選擇帖子。');
+  say('先保存帖子（語言／語體設定會一齊保存），再交畀 LLM 按設定改寫⋯⋯');
+  if(!await savePost())return;
+  setTimeout(()=>refineRun('【系統指令】請嚴格按照本帖「发帖語言／語體」設定重新輸出全文：意思、結構、標籤保持，只轉換語言（繁↔簡）與語體（廣東話口語↔書面語）。'),600);
+}
+/* ── 自動設計：內容選擇（覆選＋拖拉排序）── */
+let KORDER=['text','image','video'],KSEL=new Set(['text','image']);
+const KNAME={text:'📝 純文字',image:'🖼 圖片',video:'🎬 視頻'};
+function renderKinds(){
+  const ord=KORDER.filter(k=>KSEL.has(k));
+  $('kindchips').innerHTML=KORDER.map(k=>`<span class="kchip ${KSEL.has(k)?'on':''}" draggable="true" data-k="${k}"
+    onclick="toggleKind('${k}')" ondragstart="dragKind(event,'${k}')" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="dropKind(event,'${k}')">
+    <span class="ord">${ord.indexOf(k)+1}</span>${KNAME[k]}</span>`).join('')
+    +'<span class="meta">（文字為帖子主體；圖片／視頻按順序執行，工作流跟表頭全局所選）</span>';
+}
+function toggleKind(k){
+  if(KSEL.has(k)){if(KSEL.size<=1)return say('至少需要選擇一項。');KSEL.delete(k);}else KSEL.add(k);
+  renderKinds();
+}
+let DRAGK=null;
+function dragKind(e,k){DRAGK=k;e.dataTransfer.effectAllowed='move';}
+function dropKind(e,k){e.preventDefault();if(!DRAGK||DRAGK===k)return;
+  KORDER=KORDER.filter(x=>x!==DRAGK);KORDER.splice(KORDER.indexOf(k),0,DRAGK);DRAGK=null;renderKinds();}
+function onAutoNoteType(){if($('auto_notetype').value==='idea'){KSEL=new Set(['text']);renderKinds();}}
+function autoDesign(){
+  if(AUTOINT)return say('🪄 正在設計中，請等待結果（進行期間此按鈕暫不可用）');
+  if(!KSEL.size)return say('請至少選擇一項生成內容。');
+  if($('auto_notetype').value==='idea'){KSEL=new Set(['text']);renderKinds();}
+  const kinds=KORDER.filter(k=>KSEL.has(k));
+  const b=$('btn_auto');b.disabled=true;
+  busyBeat('🪄 自動設計（完整人設＋正典卡已提交）＝'+kinds.map(k=>KNAME[k].replace(/^\S+\s/,'')).join('＋'),kinds.length>1?'文案＋生成需要數分鐘；本地模型首次載入可能較久，請勿關閉頁面':'需讀取完整設定，通常需要 30–120 秒，請勿關閉頁面');
+  (async()=>{
+    let r;
+    try{r=await(await fetch('/api/auto',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({kinds,hint:$('autohint').value.trim(),id:CUR?CUR.id:'',refs:CURREFS,
+        note_mode:$('auto_notetype').value})})).json();}
+    catch(e){r={ok:false,error:'請求失敗：'+e+'（Post Studio 服務可能已停止，請重新執行 start-post-studio.bat）'};}
+    clearInterval(AUTOINT);AUTOINT=null;b.disabled=false;
+    if(!r.ok)return say('❌ '+String(r.error||JSON.stringify(r)).slice(0,400));
+    say('⏱ 用時 '+(r.secs!=null?r.secs+' 秒':'-')+'\n'+(r.filled?('✅ 已填入空白草稿 #'+r.id):('✅ 已生成新帖 #'+r.id))
+      +(r.image?'（含圖片）':'')+(r.video?'（含視頻）':'')
+      +(r.banned&&r.banned.length?('\n⛔ 注意：仍含紅線詞「'+r.banned.join('、')+'」——請先修正再發布'):'\n✅ 紅線掃描通過')
+      +(r.reason?('\n📌 選題理由：'+r.reason):'')+(r.image_detail?('\n'+r.image_detail):'')+'\n結果已顯示於手機模擬與編輯器，校對後即可點擊「▶ 立即發布」。');
+    $('autohint').value='';openPost(r.id);refreshList();
+    if(VIEW==='media')loadMedia(true);
+  })();
+}
+async function pub(sched){
+  if(!CUR)return say('尚未選擇帖子。');
+  if(!confirm(sched?('確定要定時發布 #'+CUR.id+'：\n'+sched):'確定要立即發布 #'+CUR.id+'？'))return;
+  say('發布中⋯⋯（MCP 會開啟瀏覽器，必要時需掃碼驗證）');
+  const r=await(await fetch('/api/post/publish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:CUR.id,schedule_at:sched})})).json();
+  say(r.ok?('🎉 發布成功！\n'+(r.detail||'').slice(0,300)):('❌ '+(r.error||JSON.stringify(r)).slice(0,300)));openPost(CUR.id);
+}
+function pubSched(){const s=$('sched').value;if(!s)return say('請先選擇日期與時間，再使用定時發布。');pub(s);}
+/* ── 🗂 帖子總覽 ── */
+let OVERSIG='';
+async function loadOverview(force){
+  let ps;try{ps=await(await fetch('/api/posts')).json();}catch(e){$('ovgrid').innerHTML='<div class="meta">（無法讀取帖檔）</div>';return}
+  const st=$('ov_status').value, sort=$('ov_sort').value;
+  let rows=ps.filter(p=>!st||p.status===st);
+  const by={'updated_desc':(a,b)=>(b.updated||'').localeCompare(a.updated||''),'updated_asc':(a,b)=>(a.updated||'').localeCompare(b.updated||''),
+    'id_asc':(a,b)=>a.id.localeCompare(b.id),'id_desc':(a,b)=>b.id.localeCompare(a.id),
+    'pub_desc':(a,b)=>(b.published_at||'').localeCompare(a.published_at||'')||(b.updated||'').localeCompare(a.updated||'')};
+  rows.sort(by[sort]||by.updated_desc);
+  const sig=JSON.stringify(rows);if(sig===OVERSIG&&!force)return;OVERSIG=sig;
+  $('ovinfo').textContent=`共 ${ps.length} 帖，顯示 ${rows.length} 帖 · 每 3 秒自動更新`;
+  $('ovgrid').innerHTML=rows.map(p=>`<div class="ovcard" onclick="showView('work');openPost('${p.id}')">
+    ${p.thumb?(isVid(p.thumb)?`<video class="cv th" src="/img?path=${encodeURIComponent(p.thumb)}#t=0.5" preload="metadata" muted playsinline style="width:100%;aspect-ratio:3/4;background:#000" onerror="this.outerHTML='<div class=&quot;cv nobg&quot;>🎬 視頻帖</div>'"></video>`:`<div class="cv" style="background-image:url(/img?path=${encodeURIComponent(p.thumb)})"></div>`):`<div class="cv nobg">無圖片（純文字帖）</div>`}
+    <div class="bd">
+      <div class="tt">${badge(p.status)}${p.note_type==='idea'?'<span class="badge" style="background:#8e44ad">💭想法</span>':''}${esc(p.title||'（無標題・想法帖）')}</div>
+      <div class="sn">${esc(p.snippet||'（尚無正文）')}</div>
+      ${(p.tags||[]).length?`<div class="tg">${p.tags.map(t=>'#'+esc(t)).join(' ')}</div>`:''}
+      <div class="mt2">#${p.id} · ${p.published_at?('發布於 '+p.published_at):(p.scheduled_at?('定時 '+p.scheduled_at):('修改於 '+(p.updated||'-')))}${(p.lang==='s'||p.register==='sw')?` · ${p.lang==='s'?'簡':'繁'}·${p.register==='sw'?'書面':'粵'}`:''}</div>
+    </div>
+    <button class="danger" style="position:absolute;right:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;border:0" title="刪除此帖" onclick="event.stopPropagation();delPostById('${p.id}','${p.status}')">✕</button>
+  </div>`).join('')||'<div class="meta">（此篩選條件下暫無帖子）</div>';
+}
+/* 總覽卡片 ✕ 刪除（修復：舊版用內聯 IIFE 少咗調用括號所以冇反應——改做具名函數） */
+async function delPostById(id,status){
+  const isPub=status==='published';
+  if(isPub){
+    if(!confirm('帖子 #'+id+' 已發布。刪除會同時喺小紅書（創作平台）刪除該筆記。\n確定刪除？'))return;
+    if(!confirm('二次確認：刪除後唔可還原（posts/deleted.log 會保留紀錄）。確認刪除 #'+id+'？'))return;
+  }else if(!confirm('確定刪除草稿 #'+id+'？（未發布，淨係刪本地帖檔）'))return;
+  say('刪除中⋯⋯'+(isPub?'（會嘗試經瀏覽器喺創作平台刪除）':''));
+  let r;try{r=await(await fetch('/api/post/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,platform:isPub})})).json();}
+  catch(e){return say('❌ 刪除請求失敗：'+e);}
+  if(!r.ok)return say('❌ '+(r.error||JSON.stringify(r)));
+  say((r.platform&&r.platform.done)?'✅ #'+id+' 已刪除（平台：'+r.platform.detail+'）'
+    :'✅ 帖檔已刪除 #'+id+(isPub?('\n⚠️ 平台端：'+((r.platform&&r.platform.detail)||'請喺 App 手動刪除')):''));
+  if(CUR&&CUR.id===id){CUR=null;CURIMG=[];}
+  OVERSIG='';loadOverview(true);refreshList();
+}
+/* ── ⚙️ 系統設置（LLM／ComfyUI／工作流／介面）＋表頭快速選用 ── */
+async function loadSettings(){
+  try{SETTINGS=await(await fetch('/api/settings')).json();}catch(e){return}
+  updBackendSelectors();
+  $('llmtbl').innerHTML=SETTINGS.llms.map(l=>`<tr>
+    <td style="width:18px"><input type="radio" name="allm" ${l.id===SETTINGS.active_llm?'checked':''} onchange="SETTINGS.active_llm='${l.id}';saveSettings()"></td>
+    <td style="width:20%"><input value="${esc(l.name)}" oninput="updLLM('${l.id}','name',this.value)"></td>
+    <td style="width:12%"><input value="${l.type}" oninput="updLLM('${l.id}','type',this.value)"></td>
+    <td><input class="k" value="${esc(l.base_url)}" oninput="updLLM('${l.id}','base_url',this.value)"></td>
+    <td style="width:16%"><input class="k" type="password" value="${esc(l.api_key)}" placeholder="api key" oninput="updLLM('${l.id}','api_key',this.value)"></td>
+    <td style="width:14%"><input class="k" value="${esc(l.model)}" placeholder="model" oninput="updLLM('${l.id}','model',this.value)"></td>
+    <td style="width:110px"><button class="tiny" onclick="testLLM('${l.id}')">測試連線</button> <button class="tiny" onclick="delLLM('${l.id}')">✕</button></td></tr>`).join('');
+  $('comftbl').innerHTML=SETTINGS.comfyui.map(l=>`<tr>
+    <td style="width:18px"><input type="radio" name="acmp" ${l.id===SETTINGS.active_comfy?'checked':''} onchange="SETTINGS.active_comfy='${l.id}';saveSettings()"></td>
+    <td style="width:20%"><input value="${esc(l.name)}" oninput="updComfy('${l.id}','name',this.value)"></td>
+    <td style="width:22%"><input class="k" value="${esc(l.url)}" oninput="updComfy('${l.id}','url',this.value)"></td>
+    <td><input class="k" value="${esc(l.video_workflow||'')}" placeholder="（舊式 fallback，可留空）" oninput="updComfy('${l.id}','video_workflow',this.value)"></td>
+    <td style="width:110px"><button class="tiny" onclick="testComfy('${l.id}')">測試連線</button> <button class="tiny" onclick="delComfy('${l.id}')">✕</button></td></tr>`).join('');
+  $('wftbl').innerHTML=(SETTINGS.workflows||[]).map(w=>`<tr>
+    <td style="width:60px"><select class="sel" style="width:100%" onchange="updWF('${w.id}','type',this.value);saveSettings()"><option value="image" ${w.type==='image'?'selected':''}>圖片</option><option value="video" ${w.type==='video'?'selected':''}>視頻</option></select></td>
+    <td style="width:22%"><input value="${esc(w.name)}" oninput="updWF('${w.id}','name',this.value)"></td>
+    <td><input class="k" value="${esc(w.path)}" placeholder="tools\\wf_xxx.json（API 格式）" oninput="updWF('${w.id}','path',this.value)"></td>
+    <td style="width:120px"><button class="tiny" onclick="setDefaultWF('${w.id}')">設為預設</button> <button class="tiny" onclick="delWF('${w.id}')">✕</button></td></tr>`).join('')||'<tr><td class="meta" colspan="4">（未配置工作流——用上面「＋ 新增」；默認會用內置 Z-Image／tools\\wf_template.json）</td></tr>';
+  renderWfSelectors();
+  loadXHSStatus();
+  if(VIEW==='workflows')renderWFpage();
+}
+/* 🔌 小紅書抽象層狀態（能力矩陣；§11A.K）——邊個驅動在線／邊個驅動接邊個操作 */
+async function loadXHSStatus(){
+  let s;try{s=await(await fetch('/api/xhs/status')).json()}catch(e){$('xhsinfo').textContent='讀取失敗';return}
+  if(!s||!s.drivers){$('xhsinfo').textContent='（後端未更新至抽象層版本）';return}
+  const on=d=>d.online?'<span style="color:#2f9e44">●在線</span>':'<span style="color:#c92a2a">○離線</span>';
+  $('xhsinfo').innerHTML='優先序：'+s.priority.map(esc).join(' → ');
+  $('xhsdrivers').innerHTML=s.drivers.map(d=>`<div class="card" style="flex:1;min-width:220px;margin:0;padding:8px 10px">
+    <div style="font-weight:600">${esc(d.label)}　${on(d)}</div>
+    <div class="meta" style="margin-top:4px">支援 ${d.ops.length} 個操作：${d.ops.map(o=>esc(s.op_label[o]||o)).join('、')||'（暫無）'}</div>
+  </div>`).join('');
+  $('xhstbl').innerHTML='<tr><th class="meta" style="text-align:left">操作</th><th class="meta" style="text-align:left">由邊個驅動負責</th></tr>'+
+    (s.routes||[]).map(r=>`<tr><td>${esc(s.op_label[r.op]||r.op)}</td><td>${r.driver?('<span style="font-family:Consolas">'+esc(r.driver)+'</span>'+(r.online?'':'　<span style="color:#e8590c">(未在線)</span>')):'<span class="meta">——（未實作；加 Driver 即用）</span>'}</td></tr>`).join('');
+}
+function wfOf(type){return (SETTINGS&&SETTINGS.workflows||[]).filter(w=>w.type===type)}
+function renderWfSelectors(){ // 表頭右上方「全局」工作流下拉——所有生成位（按正文生成／自動設計／媒體庫）一律跟呢度（用戶拍板 2026-11-21）
+  if(!SETTINGS)return;
+  const opt=(list,act)=>list.map((w,i)=>`<option value="${w.id}" ${w.id===act||(!act&&i===0)?'selected':''}>${esc(w.name)}</option>`).join('')||'<option value="">（未配置——去系統設置新增）</option>';
+  $('wf_g_img').innerHTML=opt(wfOf('image'),SETTINGS.active_image_wf||'');
+  $('wf_g_vid').innerHTML=opt(wfOf('video'),SETTINGS.active_video_wf||'');
+}
+async function setGlobalWF(type,id){
+  if(!SETTINGS)return;
+  if(type==='video')SETTINGS.active_video_wf=id;else SETTINGS.active_image_wf=id;
+  await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(type==='video'?{active_video_wf:id}:{active_image_wf:id})});
+  if(VIEW==='workflows')renderWFpage();if(VIEW==='settings')loadSettings();
+}
+function updBackendSelectors(){
+  if(!SETTINGS)return;
+  $('llmsel').innerHTML=SETTINGS.llms.map(l=>`<option value="${l.id}" ${l.id===SETTINGS.active_llm?'selected':''}>${esc(l.name)}</option>`).join('')||'<option>（未配置）</option>';
+  $('comfsel').innerHTML=SETTINGS.comfyui.map(l=>`<option value="${l.id}" ${l.id===SETTINGS.active_comfy?'selected':''}>${esc(l.name)}</option>`).join('')||'<option>（未配置）</option>';
+}
+async function pickLLM(id){SETTINGS.active_llm=id;await saveSettings();}
+async function pickComfy(id){SETTINGS.active_comfy=id;await saveSettings();}
+const updLLM=(id,k,v)=>{const o=SETTINGS.llms.find(x=>x.id===id);o[k]=v;};
+const updComfy=(id,k,v)=>{const o=SETTINGS.comfyui.find(x=>x.id===id);o[k]=v;};
+const updWF=(id,k,v)=>{const o=(SETTINGS.workflows||[]).find(x=>x.id===id);if(o)o[k]=v;};
+function addLLM(){SETTINGS.llms.push({id:'llm'+Date.now()%100000,name:'新 LLM',type:'openai',base_url:'http://127.0.0.1:0000/v1',api_key:'',model:''});loadSettings();}
+function addComfy(){SETTINGS.comfyui.push({id:'cmp'+Date.now()%100000,name:'新 ComfyUI',url:'http://127.0.0.1:8188',video_workflow:''});loadSettings();}
+function addWF(type){SETTINGS.workflows=SETTINGS.workflows||[];SETTINGS.workflows.push({id:'wf'+Date.now()%100000,name:type==='video'?'新視頻工作流':'新圖片工作流',type,path:'tools\\wf_'+'image'});if(type==='video')SETTINGS.workflows[SETTINGS.workflows.length-1].path='tools\\wf_video.json';loadSettings();}
+function delLLM(id){SETTINGS.llms=SETTINGS.llms.filter(x=>x.id!==id);loadSettings();saveSettings();}
+function delComfy(id){SETTINGS.comfyui=SETTINGS.comfyui.filter(x=>x.id!==id);loadSettings();saveSettings();}
+function delWF(id){SETTINGS.workflows=SETTINGS.workflows.filter(x=>x.id!==id);
+  if(SETTINGS.active_image_wf===id)SETTINGS.active_image_wf='';if(SETTINGS.active_video_wf===id)SETTINGS.active_video_wf='';loadSettings();saveSettings();}
+function setDefaultWF(id){const o=(SETTINGS.workflows||[]).find(x=>x.id===id);if(!o)return;
+  if(o.type==='video')SETTINGS.active_video_wf=id;else SETTINGS.active_image_wf=id;
+  saveSettings();renderWFpage();}
+async function saveSettings(){await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(SETTINGS)});updBackendSelectors();renderWfSelectors();
+  if(VIEW==='settings')loadSettings();if(VIEW==='workflows')renderWFpage();}
+async function testLLM(id){$('llmtest').textContent='測試中⋯⋯';const r=await(await fetch('/api/test/llm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})})).json();
+  $('llmtest').textContent=r.ok?`✅ ${r.name} 連線成功（${r.ms}ms, HTTP ${r.http}）`:(r.reachable?`⚠️ ${r.name} 有回應但 HTTP ${r.http}（請檢查 key/model/路徑） ${esc((r.detail||'').slice(0,80))}`:`❌ ${r.name} 無法連線：${esc((r.detail||'').slice(0,80))}`);
+  saveSettings();}
+async function testComfy(id){$('comftest').textContent='測試中⋯⋯';const r=await(await fetch('/api/test/comfy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})})).json();
+  $('comftest').textContent=r.ok?`✅ ${r.name} 連線成功（${r.ms}ms）`:(r.reachable?`⚠️ ${r.name} 有回應 HTTP ${r.http}`:`❌ ${r.name} 無法連線：${r.detail.slice(0,80)}`);
+  saveSettings();}
+/* ── 🔀 工作流頁（快速切換預設）── */
+function renderWFpage(){
+  if(!SETTINGS)return;
+  const row=w=>`<div class="mfile"><div class="mn"><div>${esc(w.name)} <span class="meta">${esc(w.path)}</span></div></div>
+    <label class="meta"><input type="radio" name="wfd_${w.type}" ${((w.type==='image'?SETTINGS.active_image_wf:SETTINGS.active_video_wf)||'')===w.id?'checked':''} onchange="setDefaultWF('${w.id}')"> 使用中</label>
+    <button class="tiny" onclick="showView('settings')">管理</button></div>`;
+  $('wflist_image').innerHTML=(wfOf('image').map(row).join(''))||'<div class="meta">（未配置——去「⚙️ 系統設置 → 工作流管理」新增；空＝用內置 Z-Image tools\\wf_template.json）</div>';
+  $('wflist_video').innerHTML=(wfOf('video').map(row).join(''))||'<div class="meta">（未配置——建議加 tools\\wf_video_minimax_ref2va.json（MiniMax H3 Ref2VA，已附 REF 注入））</div>';
+}
+/* ── 頁切換（寫入 location.hash → 瀏覽器／表頭 ◀▶ 皆為上一頁下一頁）── */
+const VIEWS=['work','overview','media','canon','workflows','engage','logs','settings'];
+function showView(v){
+  if(location.hash!=='#'+v){location.hash='#'+v;return;} // 經 hashchange 落地，歷史自然記錄
+  renderView(v);
+}
+function renderView(v){
+  VIEW=v;
+  $('work').style.display=v==='work'?'flex':'none';
+  $('view_overview').style.display=v==='overview'?'flex':'none';
+  $('view_media').style.display=v==='media'?'flex':'none';
+  $('view_canon').style.display=v==='canon'?'flex':'none';
+  $('view_workflows').style.display=v==='workflows'?'flex':'none';
+  $('view_engage').style.display=v==='engage'?'grid':'none';   // 左右兩欄（用戶 2026-11-22 拍板；grid 不受 flex-wrap 計算影響）
+  $('view_logs').style.display=v==='logs'?'flex':'none';
+  $('view_settings').style.display=v==='settings'?'flex':'none';
+  VIEWS.forEach(x=>{$('nav_'+x).className=v===x?'primary tiny':'ghost tiny';});
+  if(v==='canon')loadCanon();
+  if(v==='overview')loadOverview(true);
+  if(v==='settings')loadSettings();
+  if(v==='workflows'){loadSettings();renderWFpage();}
+  if(v==='engage'){ENGFILLED=false;DMFILLED=false;loadEngage();}
+  if(v==='logs'){LOGS=null;pollLogs(true);}
+  if(v==='media'){loadMedia(true);loadGen(true);}
+}
+window.addEventListener('hashchange',()=>{const v=(location.hash||'').replace('#','')||'work';
+  if(!VIEWS.includes(v))return renderView('work');renderView(v);});
+/* ── 👧 Suki 人設檔案頁（TAB 分類：AGENTS／日記／canon 卡／媒體索引；用戶拍板 2026-11-21）── */
+let CANON=null,CANTAB='agents',CANEDIT=false;
+const CAN_TAIL=[['media','🖼 媒體索引']];
+function canTabs(){
+  const cards=Object.entries((CANON&&CANON.cards)||{}).map(([k,v])=>[k,v.label]);
+  return [['agents','📕 AGENTS.md 正典'],['diary','📖 發帖日記'],...cards,...CAN_TAIL];
+}
+function setCanTab(t){CANTAB=t;CANEDIT=false;renderCanon();}
+function editCanonCur(){CANEDIT=true;const t=CANTAB;
+  $('canedit').value=t==='agents'?(CANON.agents||''):t==='diary'?(CANON.diary||''):t==='media'?'（媒體索引唔可編輯）':((CANON.cards[t]||{}).text||'');
+  $('canedit').style.display='block';$('canbody').style.display='none';
+  $('btn_ce').style.display='none';$('btn_cs').style.display='';$('btn_cc').style.display='';}
+async function saveCanonCur(){
+  const t=CANTAB;if(t==='media')return;
+  say('保存人設檔案中⋯⋯（舊版將自動備份至 post-studio/backup/）');
+  const r=await(await fetch('/api/canon/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:t,text:$('canedit').value})})).json();
+  say(r.ok?('✅ '+r.detail+'（改咗操作卡請記得同步返 AGENTS.md——同 Claude 講一句即可）'):('❌ '+r.detail));
+  gsay(r.ok?('✅ '+r.detail):('❌ '+r.detail));
+  if(r.ok)loadCanon();
+}
+async function loadCanon(){
+  try{CANON=await(await fetch('/api/canon')).json();}catch(e){return}
+  CANEDIT=false;renderCanon();
+}
+function renderCanon(){
+  if(!CANON){$('canbody').textContent='載入中⋯⋯';return}
+  const tabs=canTabs();
+  if(!tabs.some(t=>t[0]===CANTAB))CANTAB='agents';
+  $('cantabs').innerHTML=tabs.map(([k,l])=>`<button class="tab ${k===CANTAB?'on':''}" onclick="setCanTab('${k}')">${esc(l)}</button>`).join('');
+  $('btn_ce').style.display=CANTAB==='media'?'none':'';
+  $('btn_cs').style.display='none';$('btn_cc').style.display='none';
+  $('canedit').style.display='none';$('canbody').style.display='';
+  const cur=tabs.find(t=>t[0]===CANTAB);$('cantitle').textContent=cur?cur[1]:'';
+  if(CANTAB==='agents'){
+    const secs=(CANON.agents||'').split(/^## /m);
+    let toc='',body='';
+    secs.forEach((s,i)=>{
+      const title=((s.split('\n')[0]||'').trim()||'（檔頭）');
+      if(i>0)toc+=`<div class="tocchip" title="${esc(title)}" onclick="document.getElementById('cs${i}').scrollIntoView({behavior:'smooth'})">${i}. ${esc(title.slice(0,26))}</div>`;
+      body+=`<h4 id="cs${i}">${esc(i?('§ '+title):'（檔頭）')}</h4>`+esc(s.slice((title.length||0)+1));
+    });
+    $('canbody').innerHTML='<div style="display:flex;gap:12px;align-items:flex-start"><div style="width:220px;min-width:190px"><h4>目錄</h4>'+toc+'</div><div style="flex:1;min-width:0" class="cpre">'+body+'</div></div>';
+    return;
+  }
+  if(CANTAB==='diary'){$('canbody').innerHTML='<div class="cpre">'+esc(CANON.diary||'（尚未有日記）')+'</div>';return;}
+  if(CANTAB==='media'){
+    const ml=(CANON.media||[]).slice();
+    window.__CANONM=ml.map(rel=>CANON.root+'/'+rel);
+    $('canbody').innerHTML='<div class="meta">共 '+ml.length+' 個媒體檔案（已刪除 '+((CANON.deleted||[]).length)+' 個，喺媒體庫頁還原）· 呢度只讀，管理請去「🖼 媒體庫」</div><div class="cmedia" style="display:flex;flex-wrap:wrap">'+
+      ml.map((rel,i)=>`<a href="javascript:void(0)" onclick="event.preventDefault();openLBArr('__CANONM',${i})" title="${esc(rel)}">${isVid(rel)?`<video class="th" src="/img?path=${encodeURIComponent(CANON.root+'/'+rel)}#t=0.5" preload="metadata" muted playsinline style="width:104px;height:132px;border-radius:6px;border:1px solid var(--iline)" onerror="this.outerHTML='<div style=&quot;width:104px;height:132px;display:flex;align-items:center;justify-content:center;background:var(--soft);border-radius:6px&quot;>🎬</div>'"></video>`:`<img loading="lazy" src="/img?path=${encodeURIComponent(CANON.root+'/'+rel)}">`}<div>${esc(rel.split('/').pop())}</div></a>`).join('')+'</div>';
+    return;
+  }
+  const c=CANON.cards[CANTAB]||{text:''};
+  $('canbody').innerHTML='<div class="meta" style="margin-bottom:6px">呢張卡會完整提交畀每次生成（AGENTS.md＋全部卡）；若與 AGENTS.md 重複，以呢張卡為準。編輯後請同 Claude 講一句以同步返 AGENTS.md。</div><div class="cpre">'+esc(c.text||'（空卡）')+'</div>';
+}
+/* ── 🖼 媒體庫頁：TAB 分類＋篩選／排序＋出帖＋按圖出文案＋上傳（3 秒自動重載）── */
+let MEDATA=null,MEDSIG='',MEDTAB='全部',MEDMODE=localStorage.getItem('psmedmode')||'grid';
+const mkb=n=>n>1048576?(n/1048576).toFixed(1)+' MB':(n/1024).toFixed(0)+' KB';
+const medDir=f=>f.rel.split('/').slice(0,3).join('/');
+async function loadMedia(force){
+  let d;try{d=await(await fetch('/api/medialib')).json();}catch(e){$('medbox').textContent='（無法讀取媒體庫）';return}
+  const sig=(d.deleted||[]).map(x=>x.trash).join()+'#'+d.files.map(f=>f.rel+f.mtime).join();
+  if(sig===MEDSIG&&!force)return;
+  MEDSIG=sig;MEDATA=d;
+  if(VIEW==='media')renderMed();
+  if(VIEW==='canon'&&CANTAB==='media')renderCanon();
+  if($('modal').classList.contains('on'))renderPicker();
+}
+function medTabs(){
+  if(!MEDATA)return[];
+  const keys=[...new Set(MEDATA.files.map(medDir))].sort();
+  return ['全部',...keys,'🗑 已刪除'];
+}
+function setMedTab(t){MEDTAB=t;renderMed();}
+function setMedMode(m){MEDMODE=m;localStorage.setItem('psmedmode',m);renderMed();}
+function medOps(rel){
+  return `<button class="tiny" title="新建草稿並掛上此圖（自動準備 3:4 封面）" onclick="event.stopPropagation();postWithImage('${esc(rel)}')">📤 出帖</button>`
+    +`<button class="tiny" title="按呢張圖生成文案（可加提示）" onclick="event.stopPropagation();captionImage('${esc(rel)}')">🪄 出文案</button>`
+    +`<button class="danger" title="刪除（移入 media/.trash，不再納入參考，可還原）" onclick="event.stopPropagation();delMedia('${esc(rel)}')">刪除</button>`;
+}
+function renderMed(){
+  if(!MEDATA){$('medbox').textContent='載入中⋯⋯';return}
+  if(MEDTAB!=='全部'&&MEDTAB!=='🗑 已刪除'&&!medTabs().includes(MEDTAB))MEDTAB='全部';
+  $('btn_grid').className=MEDMODE==='grid'?'primary tiny':'ghost tiny';
+  $('btn_list').className=MEDMODE==='list'?'primary tiny':'ghost tiny';
+  $('medtabs').innerHTML=medTabs().map(t=>`<button class="${t===MEDTAB?'primary tiny':'ghost tiny'}" onclick="setMedTab('${esc(t)}')">${esc(t)}${t==='🗑 已刪除'?'（'+(MEDATA.deleted||[]).length+'）':t==='全部'?'（'+MEDATA.files.length+'）':''}</button>`).join('');
+  const root=MEDATA.root;
+  if(MEDTAB==='🗑 已刪除'){
+    const dl=MEDATA.deleted||[];
+    $('medinfo').textContent='已刪除 '+dl.length+' 個（可還原）';
+    $('medbox').innerHTML=dl.map(x=>`<div class="mfile"><div class="mn"><div title="${esc(x.orig)}">${esc(x.orig.split('/').pop())}</div><div class="ms">${x.ts} · ${esc(x.orig)}</div></div><button class="tiny" onclick="restoreMedia('${esc(x.trash)}')">♻️ 還原</button></div>`).join('')||'<div class="meta">（資源回收桶空——喺其他分頁刪除檔案後會見到）</div>';
+    return;
+  }
+  let files=MEDATA.files.filter(f=>MEDTAB==='全部'||medDir(f)===MEDTAB);
+  const ty=$('med_type').value;
+  if(ty==='img')files=files.filter(f=>!isVid(f.rel));if(ty==='vid')files=files.filter(f=>isVid(f.rel));
+  const q=($('med_q').value||'').trim().toLowerCase();
+  if(q)files=files.filter(f=>f.rel.toLowerCase().includes(q));
+  const sort=$('med_sort').value;
+  const cmp={'time_desc':(a,b)=>b.mtime.localeCompare(a.mtime),'time_asc':(a,b)=>a.mtime.localeCompare(b.mtime),
+    'name_asc':(a,b)=>a.name.localeCompare(b.name),'name_desc':(a,b)=>b.name.localeCompare(a.name),
+    'size_desc':(a,b)=>b.size-a.size}[sort]||((a,b)=>b.mtime.localeCompare(a.mtime));
+  files=files.slice().sort(cmp);
+  $('medinfo').textContent='顯示 '+files.length+' / '+MEDATA.files.length+' 個檔案 · '+(MEDMODE==='grid'?'網格':'列表')+' · 自動更新';
+  if(!files.length){$('medbox').innerHTML='<div class="meta">（冇符合條件嘅檔案）</div>';return}
+  window.__MEDVIEWS=files.map(f=>root+'/'+f.rel);
+  if(MEDMODE==='grid'){
+    $('medbox').innerHTML='<div class="mgrid">'+files.map((f,i)=>`<div class="mcell">
+      <div class="ph" ${isVid(f.rel)?'style="padding:0"':`style="background-image:url(/img?path=${encodeURIComponent(root+'/'+f.rel)})"`} onclick="openLBArr('__MEDVIEWS',${i})">${isVid(f.rel)?`<video class="th" src="/img?path=${encodeURIComponent(root+'/'+f.rel)}#t=0.5" preload="metadata" muted playsinline style="width:100%;height:100%" onerror="this.parentNode.textContent='🎬'"></video>`:''}</div>
+      <div class="nm" title="${esc(f.rel)}">${esc(f.name)}</div><div class="ms">${mkb(f.size)} · ${f.mtime}</div>
+      <div class="ops">${medOps(f.rel)}</div></div>`).join('')+'</div>';
+  }else{
+    const groups={};files.forEach(f=>{const d=medDir(f);(groups[d]=groups[d]||[]).push(f);});
+    $('medbox').innerHTML=Object.keys(groups).sort().map(dir=>`<details class="mdir" open><summary>${esc(dir)}（${groups[dir].length}）</summary>`+groups[dir].map(f=>`<div class="mfile">
+      ${isVid(f.rel)?`<div class="vi" style="padding:0;overflow:hidden" onclick="openLB('${esc(root+'/'+f.rel)}')"><video class="th" src="/img?path=${encodeURIComponent(root+'/'+f.rel)}#t=0.5" preload="metadata" muted playsinline style="width:100%;height:100%" onerror="this.parentNode.textContent='🎬'"></video></div>`:`<img loading="lazy" src="/img?path=${encodeURIComponent(root+'/'+f.rel)}" onclick="openLB('${esc(root+'/'+f.rel)}')" onerror="this.style.visibility='hidden'">`}
+      <div class="mn"><div title="${esc(f.rel)}">${esc(f.name)}</div><div class="ms">${mkb(f.size)} · ${f.mtime}</div></div>
+      ${medOps(f.rel)}</div>`).join('')+`</details>`).join('');
+  }
+}
+async function uploadMedia(inp){
+  const f=inp.files&&inp.files[0];inp.value='';
+  if(!f)return;
+  if(f.size>200*1024*1024)return gsay('❌ 檔案太大（上限 200MB）');
+  const fr=new FileReader();
+  fr.onload=async()=>{
+    gsay('⬆ 上傳緊「'+f.name+'」入媒體庫⋯⋯');
+    const b64=String(fr.result).split(',')[1]||'';
+    try{
+      const r=await(await fetch('/api/media/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,data_b64:b64})})).json();
+      gsay(r.ok?('✅ 已入庫：'+r.path):('❌ '+(r.error||JSON.stringify(r))));
+      loadMedia(true);
+    }catch(e){gsay('❌ 上傳失敗：'+e);}
+  };
+  fr.readAsDataURL(f);
+}
+async function postWithImage(rel){
+  const r=await(await fetch('/api/post/with_image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:rel,id:CUR?CUR.id:''})})).json();
+  if(!r.ok)return say('❌ '+String(r.error||'').slice(0,200));
+  say((r.filled?('✅ 已掛上空白草稿 #'+r.id):('✅ 已新建草稿 #'+r.id))+'（圖已準備，寫文案可以用「🪄 出文案」或者自己打字）');
+  showView('work');openPost(r.id);
+}
+async function captionImage(rel){
+  if(AUTOINT)return say('🪄 已有任務進行中，請等待完成。');
+  const hint=prompt('提示（可留空）：呢張圖想配咩情緒／角度？\n例如「夾公仔機前，夾唔到嘅灰心」「考完試嘅獎勵，開心」');
+  if(hint===null)return;
+  busyBeat('🪄 按圖出文案（完整人設已提交）','圖：'+rel+(hint?('\n提示：'+hint):'')+'（通常需要 30–120 秒）');
+  (async()=>{
+    let r;
+    try{r=await(await fetch('/api/auto/from_image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:rel,hint,id:CUR?CUR.id:''})})).json();}
+    catch(e){r={ok:false,error:'請求失敗：'+e};}
+    clearInterval(AUTOINT);AUTOINT=null;
+    if(!r.ok)return say('❌ '+String(r.error||JSON.stringify(r)).slice(0,300));
+    say('⏱ '+(r.secs||'-')+' 秒\n'+(r.filled?('✅ 已填入空白草稿 #'+r.id):('✅ 已生成新帖 #'+r.id))
+      +(r.banned&&r.banned.length?('\n⛔ 仍含紅線詞：'+r.banned.join('、')):'\n✅ 紅線掃描通過')
+      +(r.reason?('\n📌 '+r.reason):'')+'\n已跳到工作台，校對後即可發布。');
+    showView('work');openPost(r.id);
+  })();
+}
+async function delMedia(rel){
+  const name=rel.split('/').pop();
+  const used=(LIST||[]).some(p=>(p.thumb||'').includes(name));
+  if(!confirm('確定要刪除「'+name+'」嗎？\n刪除後此檔案不再納入自動設計與提示詞參考（可喺「🗑 已刪除」分頁還原）。'+(used?'\n⚠️ 有帖用緊呢張圖——帖內會唔再顯示，但檔可以去回收桶還原。':'')))return;
+  const r=await(await fetch('/api/media/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:rel})})).json();
+  say((r.ok?'🗑 ':'❌ ')+r.detail);gsay((r.ok?'🗑 ':'❌ ')+r.detail);
+  loadMedia(true);if(VIEW==='canon')loadCanon();
+}
+async function restoreMedia(tn){
+  const r=await(await fetch('/api/media/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trash:tn})})).json();
+  say((r.ok?'♻️ ':'❌ ')+r.detail);loadMedia(true);
+}
+/* ── ✨ 生成隊列（提示詞→ComfyUI 排隊）── */
+const GST={queued:['q','⏳ 排隊中'],generating:['g','⚙️ 生成中⋯⋯'],done:['d','✅ 已完成'],error:['e','❌ 失敗']};
+let GENSIG='';
+async function submitGen(){
+  const p=$('genprompt').value.trim();
+  gsay('提交緊⋯⋯');
+  if(!p){gsay('❌ 請先寫提示詞（描述畫面）。');return}
+  const kinds=[];if($('g_img').checked)kinds.push('image');if($('g_vid').checked)kinds.push('video');
+  if(!kinds.length){gsay('❌ 請至少選「圖片」或「視頻」。');return}
+  let r;
+  try{r=await(await fetch('/api/media/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({prompt:p,kinds,refs:GENREFS})})).json();}
+  catch(e){gsay('❌ 請求失敗：'+e+'（服務可能已停止）');return}
+  if(!r.ok){gsay('❌ '+String(r.error||''));return}
+  gsay('🚀 已提交 '+r.ids.length+' 個生成任務（'+kinds.join('＋')+'）——ComfyUI 排隊處理，完成會自動出現喺下方隊列＋媒體庫。可以繼續寫下一單。');
+  $('genprompt').value='';loadGen(true);loadMedia(true);
+}
+async function clearGen(){await fetch('/api/gen/clear',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});GENSIG='';loadGen(true);}
+let GSShown=null;
+async function loadGen(force){
+  let d;try{d=await(await fetch('/api/gen/queue')).json();}catch(e){return}
+  const ts=d.tasks||[];
+  if(GSShown===null){GSShown={};ts.forEach(t=>{if(t.status==='done'||t.status==='error')GSShown[t.id]=1})} // 首次開頁：舊任務唔重播（避免殘留橫額誤會）
+  ts.forEach(t=>{if((t.status==='done'||t.status==='error')&&!GSShown[t.id]){GSShown[t.id]=1;
+    if(t.status==='done')gsay('✅ 任務已完成——圖/片喺下方生成隊列同媒體庫（呢個訊息之後會被新動作覆蓋）');
+    else gsay('❌ 任務失敗：'+String(t.detail||t.error||'見系統日誌'));}});
+  const sig=JSON.stringify(ts);if(sig===GENSIG&&!force)return;GENSIG=sig;
+  const root=(MEDATA||{}).root||'';
+  $('genq').innerHTML=ts.length?ts.map(t=>{
+    const s=GST[t.status]||['q',t.status];
+    const f=(t.files&&t.files[0])?(root+'/'+t.files[0]):'';
+    return `<div class="gitem"><div class="row">
+      <span class="gst ${s[0]}">${s[1]}</span><span class="meta">${t.kind==='video'?'🎬 視頻':'🖼 圖片'} · ${t.created}${(t.refs&&t.refs.length)?' · 參考 '+t.refs.length+' 張':''}</span>
+      ${t.status==='done'&&f?`<span style="margin-left:auto"><button class="tiny" onclick="postWithImage('${esc(t.files[0])}')">📤 出帖</button> <button class="tiny" onclick="captionImage('${esc(t.files[0])}')">🪄 出文案</button></span>`:''}
+      </div>${f&&t.status==='done'?(isVid(f)?`<video class="th" src="/img?path=${encodeURIComponent(f)}#t=0.5" preload="metadata" muted playsinline style="float:left;width:48px;height:64px;border-radius:6px;border:1px solid var(--iline);margin:0 8px 4px 0;cursor:zoom-in" onclick="openLB('${esc(f)}')" onerror="this.style.display='none'"></video>`:`<img src="/img?path=${encodeURIComponent(f)}" onclick="openLB('${esc(f)}')" onerror="this.style.display='none'">`):''}
+      <div class="gp">${esc((t.prompt||'').slice(0,140))}${t.prompt&&t.prompt.length>140?'⋯⋯':''}</div>
+      ${t.detail?`<div class="meta" style="color:#e05c5c">${esc(t.detail)}</div>`:''}</div>`;}).join('')
+    :'<span class="meta">（暫無生成任務——喺左邊寫提示詞提交，完成後會自動出現喺右邊媒體庫）</span>';
+}
+/* ── Lightbox（可 ←/→ 連看一個清單；方向鍵支援）── */
+let LBLIST=[],LBIDX=0;
+function paintLB(){
+  const path=LBLIST[LBIDX]||'';const url='/img?path='+encodeURIComponent(path);
+  $('lbbox').innerHTML=isVid(path)?`<video src="${url}" controls autoplay></video>`:`<img src="${url}" onerror="this.onerror=null;this.remove();document.getElementById('lbbox').innerHTML='<div style=&quot;color:#aaa;font-size:14px&quot;>（呢個檔案唔讀取到／可能已被刪除）</div>'">`;
+  $('lbcap').textContent=(LBLIST.length>1?`(${LBIDX+1}/${LBLIST.length}) `:'')+path;
+  $('lb').classList.toggle('multi',LBLIST.length>1);
+}
+function openLB(path){LBLIST=[path];LBIDX=0;paintLB();$('lb').classList.add('on');}
+function openLBArr(name,i){LBLIST=window[name]||[];LBIDX=i||0;if(!LBLIST.length)return;paintLB();$('lb').classList.add('on');}
+function lbNav(d){if(LBLIST.length<2)return;LBIDX=(LBIDX+d+LBLIST.length)%LBLIST.length;paintLB();}
+function lbCover(){ // 帖子預覽：視頻唔弹窗——直接喺封面度播放／暫停（用戶拍板 2026-11-21：「直接在地播放才像模擬」）；圖片照樣 Lightbox
+  const v=$('cover').querySelector('video');
+  if(v){if(v.paused)v.play();else v.pause();return;}
+  if(window.__COVER)openLB(window.__COVER);
+}
+function closeLB(){$('lb').classList.remove('on');$('lbbox').innerHTML='';}
+document.addEventListener('keydown',e=>{
+  if($('modal').classList.contains('on')&&e.key==='Escape')return closePicker();
+  if(!$('lb').classList.contains('on'))return;
+  if(e.key==='Escape')closeLB();
+  else if(e.key==='ArrowLeft'){e.preventDefault();lbNav(-1);}
+  else if(e.key==='ArrowRight'){e.preventDefault();lbNav(1);}
+});
+/* ── 手機模擬大小（小＝現有預設／中／大）── */
+const PHW={s:345,m:430,l:515};
+function setPhone(k){
+  if(!PHW[k])k='s';
+  $('phone').style.setProperty('--pw',PHW[k]+'px');
+  ['s','m','l'].forEach(x=>{$('ph_'+x).className=k===x?'primary tiny':'ghost tiny';});
+  localStorage.setItem('psphone',k);
+}
+/* ── 主題＋顯示大小（七級；「⚙️ 系統設置」頁設定，存 localStorage）── */
+function setTheme(on){document.body.classList.toggle('dark',on);$('themesel').value=on?'dark':'light';localStorage.setItem('pstheme',on?'dark':'light');}
+if(localStorage.getItem('pstheme')==='dark')document.body.classList.add('dark');
+const ZS=[0.9,1.05,1.2,1.35,1.55,1.8,2.1];
+function setZoom(v){const i=Math.max(1,Math.min(7,parseInt(v)||6))-1;document.body.style.zoom=ZS[i];localStorage.setItem('pszoom',String(i+1));$('fz').value=String(i+1);}
+if(!localStorage.getItem('pszoomver')){ // 用戶要求「調大三級」：舊值一次性上移 3 級
+  const old=parseInt(localStorage.getItem('pszoom')||'4');
+  localStorage.setItem('pszoom',String(Math.min(7,old+3)));
+  localStorage.setItem('pszoomver','1');
+}
+/* 📜 系統日誌頁（遷自工作台 LOG 欄；用戶拍板 2026-11-21：優化顯示＝逐行着色＋來源／搵字篩選） */
+let LOGS=null;
+async function pollLogs(force){
+  if(VIEW!=='logs')return;
+  if(!force&&!$('lg_auto').checked&&LOGS)return renderLogs();
+  try{const r=await(await fetch('/api/logs')).json();LOGS=r.lines||[];}
+  catch(e){$('logbox').innerHTML='<div class="lgline err">（無法讀取日誌——Post Studio 服務可能已停止）</div>';return}
+  renderLogs();
+}
+function renderLogs(){
+  if(!LOGS){$('logbox').textContent='載入中⋯⋯';return}
+  const src=$('lg_src').value,q=($('lg_q').value||'').trim().toLowerCase();
+  let rows=(LOGS||[]).filter(l=>(!src||l.startsWith('['+src+']'))&&(!q||l.toLowerCase().includes(q)));
+  rows=rows.slice(-300);
+  if($('lg_desc').checked)rows=rows.slice().reverse();
+  $('lginfo').textContent='顯示 '+rows.length+' 行（各檔尾 60 行）'+($('lg_auto').checked?' · 自動更新中':' · 自動更新已停');
+  $('logbox').innerHTML=rows.map(l=>{
+    const cls=/error|failed|失敗|錯誤|❌|⛔|EXC|Traceback|exception/i.test(l)?'err'
+      :/✅|OK\b|done|成功|完成/.test(l)?'ok'
+      :l.startsWith('[pub]')?'pub':l.startsWith('[auto]')?'src':'';
+    return '<div class="lgline '+cls+'">'+esc(l)+'</div>';}).join('')
+    ||'<div class="lgline" style="color:#888">（無符合條件嘅記錄——使用「✨ 自動設計」或發布後，此處會顯示流水）</div>';
+}
+async function poll(){
+  await refreshList();
+  if(!CUR)openPost((LIST[LIST.length-1]||{}).id||'');
+  try{const m=await(await fetch('/api/mcp')).json();$('mcpdot').className='dot '+(m.up?'on':'off')}catch(e){$('mcpdot').className='dot off'}
+  if(VIEW==='logs')pollLogs();
+  if(VIEW==='media'){loadMedia();loadGen();}   // 自動更新（用戶拍板）：新成品自動出現
+  if(VIEW==='overview')loadOverview();
+  if(VIEW==='canon'&&CANTAB==='media')loadMedia();
+  if(VIEW==='engage')loadEngage();
+}
+/* ── 🤝 自動互動頁（養號引擎控制：狀態＋計數＋設定＋日誌；3 秒自動更新）── */
+let ENGDATA=null,ENGFILLED=false;
+async function loadEngage(){
+  let d;try{d=await(await fetch('/api/engage')).json();}catch(e){$('engstatus').textContent='（無法讀取——服務可能已停止）';return}
+  ENGDATA=d;renderEngStatus();
+  if(!ENGFILLED){fillEngForm(d.settings);ENGFILLED=true;}
+  $('englog').innerHTML=(d.log||[]).slice(-40).reverse().map(l=>esc(l).replace(/https:\/\/www\.xiaohongshu\.com\/explore\/[A-Za-z0-9_-]+/g,u=>'<a href="'+u+'" target="_blank" style="color:#7cc7ff;text-decoration:underline" title="撳開個帖睇睇">'+u+'</a>')).join('\n')||'（未有互動紀錄——撳「▶ 開始」或者「🧪 試一輪」）';
+  loadDM();
+}
+function renderEngStatus(){
+  const d=ENGDATA;if(!d)return;
+  $('btn_eng_start').style.display=d.running?'none':'';
+  $('btn_eng_stop').style.display=d.running?'':'none';
+  $('engbadge').className='badge '+(d.running?(d.in_window?'b-published':'b-scheduled'):'b-draft');
+  $('engbadge').textContent=d.running?(d.in_window?'● 運行中（喺時段內）':'● 待命中（等下一個時段）'):'○ 已停止';
+  const c=d.state&&d.state.counts||{},q=d.settings.daily||{};
+  $('engstatus').innerHTML=(d.running?'<strong>引擎運行中</strong>':'引擎未運行。')+
+    (d.note?'｜'+esc(d.note):'')+'<br>今日時段：<code>'+((d.windows||[]).join('  ')||'（未設定）')+'</code>'+
+    (d.in_window?'（而家正喺時段內）':'（而家唔喺時段內，運行中都會等）')+
+    '｜今日 '+esc(d.state.date||'')+'｜累計 '+(d.state.sessions||0)+' 輪｜已認識筆記 '+(d.state.seen||0)+' 篇（30 日內唔重複）';
+  const k={like:'點讚',favorite:'收藏',comment:'評論',reply:'回覆'};
+  $('engcounts').innerHTML=Object.keys(k).map(x=>`<span class="chip" style="border-color:${(c[x]||0)>=q[x]?'#e05c5c':'var(--violet)'}">${k[x]} ${c[x]||0}/${q[x]}</span>`).join('');
+}
+function fillEngForm(s){
+  $('eng_ww').value=s.windows_weekday||'';$('eng_we').value=s.windows_weekend||'';
+  $('eng_smin').value=s.sleep_min;$('eng_smax').value=s.sleep_max;
+  $('eng_rmin').value=s.round_gap_min;$('eng_rmax').value=s.round_gap_max;
+  $('eng_sess').value=s.session_max_min;
+  $('eng_dl').value=(s.daily||{}).like;$('eng_df').value=(s.daily||{}).favorite;$('eng_dc').value=(s.daily||{}).comment;$('eng_dr').value=(s.daily||{}).reply;
+  $('eng_rl').value=(s.round||{}).like;$('eng_rc').value=(s.round||{}).comment;$('eng_rr').value=(s.round||{}).reply;
+  $('eng_cr').value=s.comment_ratio;$('eng_fr').value=s.favorite_ratio;$('eng_sr').value=s.search_ratio;
+  $('eng_kw').value=(s.keywords||'').replace(/,/g,', ');$('eng_bl').value=s.blacklist||'';
+}
+function engForm(){
+  const n=(id,d)=>{const v=parseInt($(id).value);return isNaN(v)?d:v;};
+  return {windows_weekday:$('eng_ww').value.trim(),windows_weekend:$('eng_we').value.trim(),
+    sleep_min:n('eng_smin',25),sleep_max:n('eng_smax',80),round_gap_min:n('eng_rmin',240),round_gap_max:n('eng_rmax',520),
+    session_max_min:n('eng_sess',25),
+    daily:{like:n('eng_dl',10),favorite:n('eng_df',4),comment:n('eng_dc',4),reply:n('eng_dr',8)},
+    round:{like:n('eng_rl',4),comment:n('eng_rc',2),reply:n('eng_rr',3)},
+    comment_ratio:n('eng_cr',40),favorite_ratio:n('eng_fr',15),search_ratio:n('eng_sr',40),
+    keywords:$('eng_kw').value.trim(),blacklist:$('eng_bl').value.trim()};
+}
+async function engSave(){
+  const r=await(await fetch('/api/engage/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(engForm())})).json();
+  $('engsave').textContent=r.ok?('✅ 已儲存 '+new Date().toLocaleTimeString()):('❌ '+JSON.stringify(r));
+  if(r.ok)loadEngage();
+}
+async function engStart(){
+  $('engsave').textContent='啟動中⋯⋯';
+  const r=await(await fetch('/api/engage/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(engForm())})).json();
+  $('engsave').textContent=r.ok?('✅ '+r.detail):('❌ '+r.detail);
+  loadEngage();
+}
+async function engStop(){await fetch('/api/engage/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});$('engsave').textContent='⏹ 已停止';loadEngage();}
+async function engRound(dry){
+  $('engsave').textContent=dry?'dry-run 進行中（唔會真係喺平台做事）⋯⋯':'真實一輪進行中（含 LLM 生成，可能要 1–3 分鐘）⋯⋯';
+  let r;try{r=await(await fetch('/api/engage/round',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry})})).json();}
+  catch(e){$('engsave').textContent='❌ 請求失敗：'+e;return}
+  $('engsave').textContent=(r.ok?'✅ ':'⚠ ')+(r.msg||r.error||JSON.stringify(r));
+  loadEngage();
+}
+/* ── 💬 自動私訊（白名單＋每日/逐對象上限＋生活節拍；逐對像獨立對話檔；用戶 2026-11-22 拍板）── */
+let DMCUR='',DMDATA=null,DMFILLED=false,DMSIG='';
+async function loadDM(){
+  let d;try{d=await(await fetch('/api/dm/threads')).json()}catch(e){$('dmstatus').textContent='（讀取失敗——服務可能重啟中）';return}
+  DMDATA=d;
+  $('dmbadge').className='badge '+(d.settings.on&&d.running&&d.in_window?'b-published':(d.settings.on?'b-scheduled':'b-draft'));
+  $('dmbadge').textContent=d.settings.on?(d.running?(d.in_window?'● 自動覆運行中':'● 已開——等時段（唔會亂覆）'):'已開（引擎未運行）'):'自動覆 OFF';
+  if(!DMFILLED){$('dm_on').checked=!!d.settings.on;$('dm_daily').value=d.settings.daily_max;$('dm_td').value=d.settings.thread_daily;$('dm_skip').value=d.settings.skip_names||'';DMFILLED=true;}
+  const hm=new Date();const nowS=('0'+hm.getHours()).slice(-2)+':'+('0'+hm.getMinutes()).slice(-2);
+  const nx=(d.windows||[]).find(w=>w.slice(0,5)>nowS);
+  $('dmstatus').innerHTML='今日自動覆 <strong>'+d.state.sent+'/'+d.settings.daily_max+'</strong>（每人每日≤'+d.settings.thread_daily+' 條，覆夠就停）｜'+
+   '可覆時段：<code>'+((d.windows||[]).join('  ')||'（未設定）')+'</code>'+
+   (d.in_window?'——而家喺時段內 ✅':('——而家唔喺時段，唔會覆'+(nx?('（下一段 '+nx+'）'):'（今日已完）')))+
+   '｜21:30–09:00 同返學時段永远靜默<br>'+
+   (d.running?'引擎運行中——開住自動覆就會跟住覆':'引擎未運行——自動覆唔會郁；可以用下面按鈕人手測試')+
+   (d.cdp?'':'｜⚠ 本地瀏覽器未著（更新／發送會嘗試自動開啟，或按 §17 手動開）')+
+   (d.busy?'｜⏳ 瀏覽器正忙':'');
+  const el=$('dmlist');
+  const sig=JSON.stringify([d.threads.map(t=>[t.id,t.auto,t.pending,t.n,t.updated,t.today,DMCUR===t.id]),d.cdp]);
+  if(sig!==DMSIG){DMSIG=sig;el.innerHTML=(d.threads.length?'':'<div class="meta" style="padding:12px">（未有對話紀錄——撳「🔄 即刻更新私信」由平台讀入；讀入後先見到各對話對象）</div>')+
+   d.threads.map(t=>'<div style="padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;'+(DMCUR===t.id?'background:rgba(124,199,255,.10)':'')+'" onclick="openDM(\''+t.id+'\')">'+
+    '<div style="display:flex;align-items:center;gap:6px"><strong>'+esc(t.name)+'</strong>'+
+    (t.pending?'<span class="badge b-scheduled">新'+t.pending+'</span>':'')+
+    '<label style="margin-left:auto;display:flex;align-items:center;gap:3px;font-size:.85em;cursor:pointer" title="只自動覆剔咗嘅對象（白名單制）"><input type="checkbox" '+(t.auto?'checked':'')+' onclick="event.stopPropagation()" onchange="dmAuto(\''+t.id+'\',this.checked)"> 自動覆</label></div>'+
+    '<div class="meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px;margin-top:2px">'+(t.last_dir==='in'?'對方：':(t.last_dir==='out'?'我：':''))+esc(t.last||'（空）')+'</div>'+
+    '<div class="meta">'+esc(t.updated||'')+'｜共 '+t.n+' 條'+(t.today?'｜今日覆咗 '+t.today+' 條':'')+'</div></div>').join('');}
+}
+async function dmAuto(uid,on){await fetch('/api/dm/auto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:uid,auto:on})});$('dmact').textContent=(on?'✅ 開咗自動覆':'已關自動覆');loadDM();}
+async function openDM(uid){
+  DMCUR=uid;loadDM();
+  let t;try{t=await(await fetch('/api/dm/thread?id='+encodeURIComponent(uid))).json()}catch(e){return}
+  const msgs=t.messages||[];
+  $('dmthead').textContent='與 '+(t.name||uid)+' 嘅完整對話（'+msgs.length+' 條——獨立保存喺 post-studio/dm/threads/'+uid+'.json）';
+  $('dmthread').innerHTML=(msgs.map(m=>'<div style="display:flex;justify-content:'+(m.dir==='out'?'flex-end':'flex-start')+';margin:6px 0">'+
+    '<div style="max-width:78%;padding:7px 11px;border-radius:14px;background:'+(m.dir==='out'?'rgba(94,130,255,.18)':'rgba(128,128,128,.13)')+';border:1px solid var(--line)">'+
+    '<div style="white-space:pre-wrap;word-break:break-word">'+esc(m.text)+'</div>'+
+    '<div class="meta" style="text-align:right;margin-top:2px;opacity:.75">'+esc(m.ts||'')+(m.via==='auto'?'｜🤖自動覆':(m.via==='manual'?'｜人手覆':''))+(m.seen_at?'｜入檔 '+esc(m.seen_at):'')+'</div></div></div>').join(''))||'（空）';
+  const el=$('dmthread');el.scrollTop=el.scrollHeight;
+}
+async function dmDo(url,body){
+  const s=$('dmact');s.textContent='⏳ 進行中——會開本地瀏覽器操作小紅書，可能要 1–3 分鐘⋯⋯';
+  let r;try{r=await(await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})})).json()}catch(e){s.textContent='❌ 請求失敗：'+e;return}
+  let msg;
+  if(!r.ok)msg='❌ '+(r.error||JSON.stringify(r));
+  else if(r.dry)msg='✅ dry-run 完成（計劃已寫入互動日誌）';
+  else if(url.indexOf('check')>0)msg='✅ 已更新：讀咗 '+(r.checked||0)+' 個会話入檔';
+  else msg='✅ 自動覆咗 '+(r.sent||0)+' 條';
+  s.textContent=msg;
+  loadDM();if(DMCUR)openDM(DMCUR);
+}
+async function dmCfgSave(){
+  const r=await(await fetch('/api/dm/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:$('dm_on').checked,daily_max:parseInt($('dm_daily').value)||3,thread_daily:parseInt($('dm_td').value)||1,skip_names:$('dm_skip').value.trim()})})).json();
+  $('dmact').textContent=r.ok?('✅ 私訊設定已儲存 '+new Date().toLocaleTimeString()):('❌ '+JSON.stringify(r));loadDM();
+}
+async function dmDraft(){
+  if(!DMCUR){$('dmact').textContent='先喺左邊揀對話對象';return}
+  $('dmact').textContent='⏳ LLM 跟住成段上下文起草中（要 1–2 分鐘）⋯⋯';
+  let r;try{r=await(await fetch('/api/dm/draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:DMCUR})})).json()}catch(e){$('dmact').textContent='❌ '+e;return}
+  if(r.ok){$('dminput').value=r.text;$('dmact').textContent='✅ 草稿已填入輸入框——改吓啱先撳發送（起草唔會發送）'}else $('dmact').textContent='❌ 起草失敗：'+(r.error||'');
+}
+async function dmSendNow(){
+  const t=$('dminput').value.trim();
+  if(!DMCUR){$('dmact').textContent='先喺左邊揀對話對象';return}
+  if(!t){$('dmact').textContent='輸入框空嘅';return}
+  $('dmact').textContent='⏳ 經本地瀏覽器發送中⋯⋯';
+  let r;try{r=await(await fetch('/api/dm/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:DMCUR,text:t})})).json()}catch(e){$('dmact').textContent='❌ '+e;return}
+  $('dmact').textContent=(r.ok?'✅ 已發送並記入對話紀錄':('❌ '+(r.error||'失敗')));
+  if(r.ok){$('dminput').value='';openDM(DMCUR)}
+}
+renderKinds();renderChips('work',CURREFS,'refchips');renderChips('gen',GENREFS,'refchips_gen');
+setPhone(localStorage.getItem('psphone')||'s');
+setZoom(localStorage.getItem('pszoom')||'6');
+$('themesel').value=document.body.classList.contains('dark')?'dark':'light';
+/* F5 原頁刷新（用戶拍板 2026-11-22：「所有頁面要支持F5原頁刷新，現在刷新就到主頁」）：
+   載入時如果 hash 係有效頁面就直接落地嗰頁；空／無效 hash 先 normalise 去 #work（經 hashchange） */
+{const v0=(location.hash||'').replace('#','');if(VIEWS.includes(v0)){renderView(v0);}else{location.replace('#work');}}
+loadSettings();poll();setInterval(poll,3000);
+// 防止 Chrome 凍結背景分頁令畫面停在舊狀態（舊紅字/空佇列）：切返嚟即刻重新整理
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){try{poll()}catch(e){}}});
+window.addEventListener('focus',()=>{try{poll()}catch(e){}});
+</script>
+</body>
+</html>
